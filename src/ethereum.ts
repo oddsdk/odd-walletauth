@@ -94,7 +94,6 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
 export async function did(): Promise<string> {
   const key = await publicSignatureKey()
   const arr = uint8arrays.concat([ SECP_PREFIX, key ])
-  console.log(uint8arrays.toString(key, "base64pad"))
 
   return `did:key:z${uint8arrays.toString(arr, "base58btc")}`
 }
@@ -266,7 +265,7 @@ export async function verifyPublicKey(): Promise<boolean> {
 
 export async function verifySignedMessage(
   { signature, message, publicKey }:
-  { signature: Uint8Array, message: Uint8Array, publicKey: Uint8Array }
+    { signature: Uint8Array, message: Uint8Array, publicKey: Uint8Array }
 ): Promise<boolean> {
   return secp.verify(
     deconstructSignature(signature).full,
@@ -282,10 +281,10 @@ export async function verifySignedMessage(
 
 function handleAccountsChanged(accounts: unknown) {
   if (isStringArray(accounts)) {
-    if (!accounts[0]) {
+    if (!accounts[ 0 ]) {
       console.warn("Please connect to Ethereum/Metamask.")
-    } else if (accounts[0] !== globCurrentAccount) {
-      globCurrentAccount = accounts[0]
+    } else if (accounts[ 0 ] !== globCurrentAccount) {
+      globCurrentAccount = accounts[ 0 ]
     }
   }
 }

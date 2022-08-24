@@ -1,37 +1,35 @@
+import * as wn from "webnative"
 import { useMemo, useState } from "react"
 import { useAccount } from "wagmi";
-import { Ucan } from "webnative/ucan/types";
+import { Ucan } from "webnative/ucan/types"
 
 import * as ethereum from "../../ethereum"
 import * as webnative from "../../webnative"
 import WelcomeCheckIcon from "./icons/WelcomeCheckIcon"
 
 const SignMessage = () => {
-  const [isVerified, setIsVerified] = useState(false)
-  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [ isVerified, setIsVerified ] = useState(false)
+  const [ showRejectionModal, setShowRejectionModal ] = useState(false)
   const { isConnected } = useAccount()
 
   /**
    * Have the user sign a message to generate and verify a Ucan for them
    */
   const signUcanMessage: () => Promise<void> = async () => {
-    let ucan: Ucan
-    try {
-      ucan = await webnative.createUcan({
-        audience: webnative.FISSION_API_DID,
-        issuer: await ethereum.did(),
-        lifetimeInSeconds: 30,
-      })
-      setShowRejectionModal(false);
-    } catch (error) {
-      console.error('User rejected signature')
-      setShowRejectionModal(true)
-    }
-
-    if (!!ucan) {
+    return webnative.createUcan({
+      audience: webnative.FISSION_API_DID,
+      issuer: await ethereum.did(),
+      lifetimeInSeconds: 30,
+    }).then(async (ucan: Ucan) => {
+      setShowRejectionModal(false)
       const isUcanVerified = await webnative.verifyUcanSignature(ucan)
       setIsVerified(isUcanVerified)
-    }
+
+    }).catch(() => {
+      console.error("User rejected signature")
+      setShowRejectionModal(true)
+
+    })
   }
 
   const handleCloseModal = () => setShowRejectionModal(false);
@@ -41,8 +39,16 @@ const SignMessage = () => {
    * This will function quite differently once we have all the different pieces working
    */
   useMemo(() => {
-    signUcanMessage()
-  }, [isConnected])
+    // signUcanMessage()
+    wn.setup.debug({ enabled: true })
+    wn.setup.endpoints({
+      api: "https://runfission.net",
+      lobby: "https://auth.runfission.net",
+      user: "fissionuser.net"
+    })
+
+    webnative.login()
+  }, [ isConnected ])
 
   return (
     <div className="flex items-center justify-center text-center h-screenWithoutNav max-w-xs m-auto">

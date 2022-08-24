@@ -15,9 +15,9 @@ import * as ethereum from "./ethereum.js"
 // ⛰
 
 
-const FISSION_API_DID = "did:key:zStEZpzSMtTt9k2vszgvCwF4fLQQSyA15W5AQ4z3AR6Bx4eFJ5crJFbuGxKmbma4"
-const WNFS_PERMISSIONS = { fs: { private: [ wn.path.root() ], public: [ wn.path.root() ] }}
-const READ_KEY_PATH = wn.path.file(wn.path.Branch.Public, ".well-known", "read-key")
+export const FISSION_API_DID = "did:key:zStEZpzSMtTt9k2vszgvCwF4fLQQSyA15W5AQ4z3AR6Bx4eFJ5crJFbuGxKmbma4"
+export const WNFS_PERMISSIONS = { fs: { private: [ wn.path.root() ], public: [ wn.path.root() ] } }
+export const READ_KEY_PATH = wn.path.file(wn.path.Branch.Public, ".well-known", "read-key")
 
 
 
@@ -31,22 +31,23 @@ export async function login() {
   let dataRoot
 
   const username = await ethereum.username()
+  const doesUserExist = await wn.lobby.isUsernameAvailable(username) === false
 
   // Create user if necessary
-  console.log("Looking up data root")
-  dataRoot = await wn.dataRoot.lookup(username)
-
-  if (!dataRoot) {
+  if (!doesUserExist) {
     console.log("Creating new Fission account")
     const { success } = await createFissionAccount(await ethereum.did())
     if (!success) manageError("Failed to create Fission user")
   }
 
   // Load, or create, WNFS
+  console.log("Looking up data root")
+  dataRoot = await wn.dataRoot.lookup(username)
+
   let fs
 
   if (!dataRoot) {
-    // New user
+    // New user or new FS
     const readKey = await wn.crypto.aes.genKeyStr()
 
     console.log("Creating new WNFS")
@@ -66,6 +67,8 @@ export async function login() {
     await fs.mkdir(wn.path.directory("private", "Documents"))
     await fs.mkdir(wn.path.directory("private", "Photos"))
     await fs.mkdir(wn.path.directory("private", "Video"))
+
+    await fs.publish()
 
   } else {
     // Existing user
