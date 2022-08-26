@@ -1,13 +1,15 @@
 import * as uint8arrays from "uint8arrays"
 import * as wn from "webnative"
+import * as debug from "webnative/common/debug.js"
 
-import { decodeCID } from "webnative/common/cid"
-import { getSimpleLinks } from "webnative/fs/protocol/basic"
-import RootTree from "webnative/fs/root/tree"
-import { PublicFile } from "webnative/fs/v1/PublicFile"
-import { PublicTree } from "webnative/fs/v1/PublicTree"
-
-import { Resource, Ucan } from "webnative/ucan/types"
+import { CID } from "multiformats/cid"
+import { decodeCID } from "webnative/common/cid.js"
+import { getSimpleLinks } from "webnative/fs/protocol/basic.js"
+import RootTree from "webnative/fs/root/tree.js"
+import { PublicFile } from "webnative/fs/v1/PublicFile.js"
+import { PublicTree } from "webnative/fs/v1/PublicTree.js"
+import { Resource, Ucan } from "webnative/ucan/types.js"
+import { FileSystem } from "webnative/fs/filesystem.js"
 
 import * as ethereum from "./ethereum.js"
 
@@ -27,14 +29,16 @@ export const READ_KEY_PATH = wn.path.file(wn.path.Branch.Public, ".well-known", 
 /**
  * Log into Fission with Ethereum.
  */
-export async function login() {
+export async function login(): Promise<FileSystem> {
   let dataRoot
 
   const username = await ethereum.username()
-  const doesUserExist = await wn.lobby.isUsernameAvailable(username) === false
+  const isNewUser = await hasFissionAccount(username) === false
+
+  console.log("isNewUser", isNewUser)
 
   // Create user if necessary
-  if (!doesUserExist) {
+  if (isNewUser) {
     console.log("Creating new Fission account")
     const { success } = await createFissionAccount(await ethereum.did())
     if (!success) manageError("Failed to create Fission user")
@@ -42,13 +46,19 @@ export async function login() {
 
   // Load, or create, WNFS
   console.log("Looking up data root")
-  dataRoot = await wn.dataRoot.lookup(username)
+  dataRoot = isNewUser ? null : await wn.dataRoot.lookup(username)
 
   let fs
 
   if (!dataRoot) {
     // New user or new FS
     const readKey = await wn.crypto.aes.genKeyStr()
+
+    console.log("generated readKey", readKey)
+    console.log("encrypt/decrypt", await decryptReadKey(await encryptReadKey(readKey)))
+    // console.log("encrypt/decrypt", "abc", uint8arrays.toString(await ethereum.decrypt(await ethereum.encrypt(uint8arrays.fromString("abc", "utf8"))), "utf8"))
+
+    return
 
     console.log("Creating new WNFS")
     fs = await wn.fs.empty({
@@ -62,23 +72,28 @@ export async function login() {
       await encryptReadKey(readKey)
     )
 
+    await fs.addPublicExchangeKey()
     await fs.mkdir(wn.path.directory("private", "Apps"))
     await fs.mkdir(wn.path.directory("private", "Audio"))
     await fs.mkdir(wn.path.directory("private", "Documents"))
     await fs.mkdir(wn.path.directory("private", "Photos"))
     await fs.mkdir(wn.path.directory("private", "Video"))
 
-    await fs.publish()
+    // await updateDataRoot(await fs.root.put())
+    // console.log("Published")
 
-  } else {
-    // Existing user
-    const publicCid = decodeCID((await getSimpleLinks(dataRoot)).public.cid)
+    const publicCid = decodeCID((await getSimpleLinks(await fs.root.put())).public.cid)
     const publicTree = await PublicTree.fromCID(publicCid)
     const unwrappedPath = wn.path.unwrap(READ_KEY_PATH)
-    const readKeyChild = await publicTree.get(unwrappedPath)
+    const publicPath = unwrappedPath.slice(1)
+    const readKeyChild = await publicTree.get(publicPath)
+
+    if (!readKeyChild) {
+      throw new Error(`Expected an encrypted read key at: ${wn.path.log(publicPath)}`)
+    }
 
     if (!PublicFile.instanceOf(readKeyChild)) {
-      throw new Error(`Did not expect a tree at: ${wn.path.log(unwrappedPath)}`)
+      throw new Error(`Did not expect a tree at: ${wn.path.log(publicPath)}`)
     }
 
     const encryptedReadKey = readKeyChild.content
@@ -86,13 +101,60 @@ export async function login() {
       throw new Error("The read key was not a Uint8Array as we expected")
     }
 
+    console.log(encryptedReadKey)
+
+    const decryptedReadKey = await decryptReadKey(encryptedReadKey as Uint8Array)
+
+    console.log(decryptedReadKey)
+
+    RootTree.storeRootKey(decryptedReadKey)
+
+    fs = await wn.fs.fromCID(
+      dataRoot,
+      { localOnly: true, permissions: WNFS_PERMISSIONS }
+    )
+
+    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
+
+    return fs
+
+  } else {
+    // Existing user & FS
+    const publicCid = decodeCID((await getSimpleLinks(dataRoot)).public.cid)
+    const publicTree = await PublicTree.fromCID(publicCid)
+    const unwrappedPath = wn.path.unwrap(READ_KEY_PATH)
+    const publicPath = unwrappedPath.slice(1)
+    const readKeyChild = await publicTree.get(publicPath)
+
+    if (!readKeyChild) {
+      throw new Error(`Expected an encrypted read key at: ${wn.path.log(publicPath)}`)
+    }
+
+    if (!PublicFile.instanceOf(readKeyChild)) {
+      throw new Error(`Did not expect a tree at: ${wn.path.log(publicPath)}`)
+    }
+
+    const encryptedReadKey = readKeyChild.content
+    if (encryptedReadKey.constructor.name !== "Uint8Array") {
+      throw new Error("The read key was not a Uint8Array as we expected")
+    }
+
+    console.log(encryptedReadKey)
+
     const readKey = await decryptReadKey(encryptedReadKey as Uint8Array)
+
+    console.log(readKey)
+
     RootTree.storeRootKey(readKey)
 
     fs = await wn.fs.fromCID(
       dataRoot,
       { localOnly: true, permissions: WNFS_PERMISSIONS }
     )
+
+    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
+
+    return fs
 
   }
 }
@@ -104,9 +166,8 @@ export async function createFissionAccount(did: string) {
 
   // Create UCAN
   const ucan = wn.ucan.encode(await createUcan({
-    audience: FISSION_API_DID,
     issuer: did,
-    lifetimeInSeconds: 30
+    audience: FISSION_API_DID,
   }))
 
   // API request
@@ -129,8 +190,57 @@ export async function createFissionAccount(did: string) {
 
 
 export async function hasFissionAccount(username: string): Promise<boolean> {
-  const dataRoot = await wn.dataRoot.lookup(username)
-  return !!dataRoot
+  return wn.lobby.isUsernameAvailable(username).then((a: boolean) => !a)
+}
+
+
+export async function updateDataRoot(cidInstance: CID): Promise<{ success: boolean }> {
+  const issuer = await ethereum.did()
+  const fsUcan = await createUcan({
+    issuer,
+    audience: issuer,
+    potency: "APPEND",
+    lifetimeInSeconds: 180
+  })
+
+  const endpoints = wn.setup.endpoints({})
+
+  const apiEndpoint = `${endpoints.api}/${endpoints.apiVersion}/api`
+  const cid = cidInstance.toString()
+
+  // Debug
+  debug.log("🌊 Updating your DNSLink:", cid)
+
+  // Make API call
+  return await fetchWithRetry(`${apiEndpoint}/user/data/${cid}`, {
+    headers: async () => {
+      const jwt = wn.ucan.encode(await createUcan({
+        issuer,
+        audience: FISSION_API_DID,
+        potency: "APPEND",
+        proof: wn.ucan.encode(fsUcan)
+      }))
+
+      return { "authorization": `Bearer ${jwt}` }
+    },
+    retries: 100,
+    retryDelay: 5000,
+    retryOn: [ 502, 503, 504 ],
+
+  }, {
+    method: "PUT"
+
+  }).then((response: Response) => {
+    if (response.status < 300) debug.log("🪴 DNSLink updated:", cid)
+    else debug.log("🔥 Failed to update DNSLink for:", cid)
+    return { success: response.status < 300 }
+
+  }).catch(err => {
+    debug.log("🔥 Failed to update DNSLink for:", cid)
+    console.error(err)
+    return { success: false }
+
+  })
 }
 
 
@@ -141,14 +251,14 @@ export async function hasFissionAccount(username: string): Promise<boolean> {
 export async function createUcan({
   audience,
   issuer,
-  lifetimeInSeconds,
+  lifetimeInSeconds = 90,
   potency,
   proof,
   resource
 }: {
   audience: string
   issuer: string
-  lifetimeInSeconds: number
+  lifetimeInSeconds?: number
   potency?: string
   proof?: string
   resource?: Resource
@@ -166,7 +276,7 @@ export async function createUcan({
     exp: currentTimeInSeconds + lifetimeInSeconds,
     fct: [],
     iss: issuer,
-    nbf: currentTimeInSeconds - 60,
+    nbf: currentTimeInSeconds - 90,
     prf: proof || null,
     ptc: potency || null,
     rsc: resource || "*",
@@ -228,6 +338,41 @@ export async function verifyUcanSignature(ucan: Ucan): Promise<boolean> {
 
 
 // ㊙️
+
+
+type RetryOptions = {
+  headers: () => Promise<{ [ _: string ]: string }>
+  retries: number
+  retryDelay: number
+  retryOn: Array<number>
+}
+
+
+async function fetchWithRetry(
+  url: string,
+  retryOptions: RetryOptions,
+  fetchOptions: RequestInit,
+  retry = 0
+): Promise<Response> {
+  const headers = await retryOptions.headers()
+  const response = await fetch(url, {
+    ...fetchOptions,
+    headers: { ...fetchOptions.headers, ...headers }
+  })
+
+  if (retryOptions.retryOn.includes(response.status)) {
+    if (retry < retryOptions.retries) {
+      return await new Promise((resolve, reject) => setTimeout(
+        () => fetchWithRetry(url, retryOptions, fetchOptions, retry + 1).then(resolve, reject),
+        retryOptions.retryDelay
+      ))
+    } else {
+      throw new Error("Too many retries for fetch")
+    }
+  }
+
+  return response
+}
 
 
 function manageError(err: string) {

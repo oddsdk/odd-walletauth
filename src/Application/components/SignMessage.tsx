@@ -40,6 +40,7 @@ const SignMessage = () => {
    */
   useMemo(() => {
     // signUcanMessage()
+
     wn.setup.debug({ enabled: true })
     wn.setup.endpoints({
       api: "https://runfission.net",
