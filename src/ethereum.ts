@@ -87,7 +87,7 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
         return resp
       }
     })
-    .then(resp => uint8arrays.fromString(resp, "utf8"))
+    .then(resp => uint8arrays.fromString(resp, "base64pad"))
 }
 
 
@@ -112,7 +112,7 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
   // ciphertext, ephemPublicKey, nonce, version
   const encrypted = sigUtil.encryptSafely({
     publicKey: uint8arrays.toString(encryptionPublicKey, "base64pad"),
-    data: uint8arrays.toString(data, "utf8"),
+    data: uint8arrays.toString(data, "base64pad"),
     version: "x25519-xsalsa20-poly1305",
   })
 

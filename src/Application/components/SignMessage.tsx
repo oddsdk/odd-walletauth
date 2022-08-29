@@ -1,11 +1,12 @@
 import * as wn from "webnative"
 import { useMemo, useState } from "react"
 import { useAccount } from "wagmi";
-import { Ucan } from "webnative/ucan/types"
+import { Ucan } from "webnative/ucan/types.js"
 
 import * as ethereum from "../../ethereum"
 import * as webnative from "../../webnative"
 import WelcomeCheckIcon from "./icons/WelcomeCheckIcon"
+
 
 const SignMessage = () => {
   const [ isVerified, setIsVerified ] = useState(false)
@@ -38,17 +39,19 @@ const SignMessage = () => {
    * I'm leaving this here for now to preserve the existing behaviour for testing purposes.
    * This will function quite differently once we have all the different pieces working
    */
-  useMemo(() => {
+  useMemo(async () => {
     // signUcanMessage()
 
-    wn.setup.debug({ enabled: true })
-    wn.setup.endpoints({
-      api: "https://runfission.net",
-      lobby: "https://auth.runfission.net",
-      user: "fissionuser.net"
-    })
+    // wn.setup.debug({ enabled: true })
+    // wn.setup.endpoints({
+    //   api: "https://runfission.net",
+    //   lobby: "https://auth.runfission.net",
+    //   user: "fissionuser.net"
+    // })
 
-    webnative.login()
+    // const fs = await webnative.login()
+
+    // console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
   }, [ isConnected ])
 
   return (

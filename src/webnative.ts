@@ -54,12 +54,6 @@ export async function login(): Promise<FileSystem> {
     // New user or new FS
     const readKey = await wn.crypto.aes.genKeyStr()
 
-    console.log("generated readKey", readKey)
-    console.log("encrypt/decrypt", await decryptReadKey(await encryptReadKey(readKey)))
-    // console.log("encrypt/decrypt", "abc", uint8arrays.toString(await ethereum.decrypt(await ethereum.encrypt(uint8arrays.fromString("abc", "utf8"))), "utf8"))
-
-    return
-
     console.log("Creating new WNFS")
     fs = await wn.fs.empty({
       permissions: WNFS_PERMISSIONS,
@@ -79,42 +73,8 @@ export async function login(): Promise<FileSystem> {
     await fs.mkdir(wn.path.directory("private", "Photos"))
     await fs.mkdir(wn.path.directory("private", "Video"))
 
-    // await updateDataRoot(await fs.root.put())
-    // console.log("Published")
-
-    const publicCid = decodeCID((await getSimpleLinks(await fs.root.put())).public.cid)
-    const publicTree = await PublicTree.fromCID(publicCid)
-    const unwrappedPath = wn.path.unwrap(READ_KEY_PATH)
-    const publicPath = unwrappedPath.slice(1)
-    const readKeyChild = await publicTree.get(publicPath)
-
-    if (!readKeyChild) {
-      throw new Error(`Expected an encrypted read key at: ${wn.path.log(publicPath)}`)
-    }
-
-    if (!PublicFile.instanceOf(readKeyChild)) {
-      throw new Error(`Did not expect a tree at: ${wn.path.log(publicPath)}`)
-    }
-
-    const encryptedReadKey = readKeyChild.content
-    if (encryptedReadKey.constructor.name !== "Uint8Array") {
-      throw new Error("The read key was not a Uint8Array as we expected")
-    }
-
-    console.log(encryptedReadKey)
-
-    const decryptedReadKey = await decryptReadKey(encryptedReadKey as Uint8Array)
-
-    console.log(decryptedReadKey)
-
-    RootTree.storeRootKey(decryptedReadKey)
-
-    fs = await wn.fs.fromCID(
-      dataRoot,
-      { localOnly: true, permissions: WNFS_PERMISSIONS }
-    )
-
-    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
+    await updateDataRoot(await fs.root.put())
+    console.log("Published")
 
     return fs
 
@@ -139,11 +99,7 @@ export async function login(): Promise<FileSystem> {
       throw new Error("The read key was not a Uint8Array as we expected")
     }
 
-    console.log(encryptedReadKey)
-
     const readKey = await decryptReadKey(encryptedReadKey as Uint8Array)
-
-    console.log(readKey)
 
     RootTree.storeRootKey(readKey)
 
@@ -152,7 +108,7 @@ export async function login(): Promise<FileSystem> {
       { localOnly: true, permissions: WNFS_PERMISSIONS }
     )
 
-    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
+    if (!fs) throw new Error("Was unable to load the filesystem from the data root: " + dataRoot)
 
     return fs
 
