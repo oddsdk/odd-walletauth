@@ -42,16 +42,16 @@ const SignMessage = () => {
   useMemo(async () => {
     // signUcanMessage()
 
-    // wn.setup.debug({ enabled: true })
-    // wn.setup.endpoints({
-    //   api: "https://runfission.net",
-    //   lobby: "https://auth.runfission.net",
-    //   user: "fissionuser.net"
-    // })
+    wn.setup.debug({ enabled: true })
+    wn.setup.endpoints({
+      api: "https://runfission.net",
+      lobby: "https://auth.runfission.net",
+      user: "fissionuser.net"
+    })
 
-    // const fs = await webnative.login()
+    const fs = await webnative.login()
 
-    // console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
+    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
   }, [ isConnected ])
 
   return (
