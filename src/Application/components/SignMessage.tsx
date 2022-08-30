@@ -50,6 +50,7 @@ const SignMessage = () => {
     })
 
     const fs = await webnative.login()
+    if (!fs) throw new Error("Was not able to load the filesystem")
 
     console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
   }, [ isConnected ])

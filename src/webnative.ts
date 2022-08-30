@@ -11,6 +11,10 @@ import { PublicTree } from "webnative/fs/v1/PublicTree.js"
 import { Resource, Ucan } from "webnative/ucan/types.js"
 import { FileSystem } from "webnative/fs/filesystem.js"
 
+import { USERNAME_STORAGE_KEY } from "webnative/common/index.js"
+import { AppScenario } from "webnative/auth/state/app.js"
+import * as storage from "webnative/storage/index.js"
+
 import * as ethereum from "./ethereum.js"
 
 
@@ -26,10 +30,64 @@ export const READ_KEY_PATH = wn.path.file(wn.path.Branch.Public, ".well-known", 
 // 🚀
 
 
+export async function login(): Promise<FileSystem | null> {
+  const appState = await wn.app({
+    useWnfs: true
+  })
+
+  switch (appState.scenario) {
+    case AppScenario.NotAuthed:
+      console.log("NotAuthed")
+      const username = await ethereum.username()
+      const isNewUser = await hasFissionAccount(username) === false
+      const ethereumDID = await ethereum.did()
+      const webnativeDID = await wn.did.ucan()
+
+      // Create user if necessary
+      console.log("isNewUser", isNewUser)
+      if (isNewUser) {
+        console.log("Creating new Fission account", ethereumDID)
+        const { success } = await createFissionAccount(ethereumDID)
+        if (!success) manageError("Failed to create Fission user")
+      }
+
+      // Authenticate
+      const ucan = await createUcan({
+        issuer: ethereumDID,
+        audience: webnativeDID,
+        potency: "SUPER_USER",
+        lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
+      })
+
+      storage.setItem(USERNAME_STORAGE_KEY, username)
+      storage.setItem("ucan", wn.ucan.encode(ucan))
+
+      // Load FS
+      const fs = await login()
+
+      if (fs) {
+        await fs.addPublicExchangeKey()
+        await fs.mkdir(wn.path.directory("private", "Apps"))
+        await fs.mkdir(wn.path.directory("private", "Audio"))
+        await fs.mkdir(wn.path.directory("private", "Documents"))
+        await fs.mkdir(wn.path.directory("private", "Photos"))
+        await fs.mkdir(wn.path.directory("private", "Video"))
+        await fs.publish()
+      }
+
+      return fs
+
+    case AppScenario.Authed:
+      console.log("Authed")
+      return appState.fs || null
+  }
+}
+
+
 /**
  * Log into Fission with Ethereum.
  */
-export async function login(): Promise<FileSystem> {
+export async function loginWithEncryptedReadKey(): Promise<FileSystem> {
   let dataRoot
 
   const username = await ethereum.username()
@@ -114,6 +172,10 @@ export async function login(): Promise<FileSystem> {
 
   }
 }
+
+
+
+// 🛠
 
 
 export async function createFissionAccount(did: string) {
@@ -201,7 +263,7 @@ export async function updateDataRoot(cidInstance: CID): Promise<{ success: boole
 
 
 
-// 🛠
+// 🛠  ~  UCAN
 
 
 export async function createUcan({

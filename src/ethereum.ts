@@ -27,7 +27,7 @@ type Signature = {
 }
 
 
-export const MSG_TO_SIGN = uint8arrays.fromString("Hello there, would you like to sign this so we can generate a DID?", "utf8")
+export const MSG_TO_SIGN = uint8arrays.fromString("Hi there, would you like to sign this so we can generate a DID for you?", "utf8")
 export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 
 

@@ -2,7 +2,7 @@ import "@rainbow-me/rainbowkit/styles.css"
 import { connectorsForWallets, RainbowKitProvider, wallet } from "@rainbow-me/rainbowkit"
 import { chain, configureChains, createClient, WagmiConfig } from "wagmi"
 import { publicProvider } from "wagmi/providers/public"
-import ReactDOM from "react-dom/client";
+import ReactDOM from "react-dom/client"
 
 import App from "./App"
 
@@ -10,9 +10,9 @@ import App from "./App"
  * I've left the testnet chains commented out here in case we want to test with them
  */
 const { chains, provider } = configureChains(
-  [chain.mainnet/*, chain.ropsten, chain.rinkeby, chain.goerli*/],
-  [publicProvider()]
-);
+  [ chain.mainnet/*, chain.ropsten, chain.rinkeby, chain.goerli*/ ],
+  [ publicProvider() ]
+)
 
 /**
  * I'm limiting the available wallets to MetaMask for now, since it's the only one that
@@ -20,7 +20,7 @@ const { chains, provider } = configureChains(
  */
 const connectors = connectorsForWallets([
   {
-    groupName: 'Recommended',
+    groupName: "Recommended",
     wallets: [
       wallet.metaMask({ chains }),
     ],
@@ -39,4 +39,4 @@ ReactDOM.createRoot(document.getElementById("app")!).render(
       <App />
     </RainbowKitProvider>
   </WagmiConfig>
-);
+)
