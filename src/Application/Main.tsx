@@ -17,12 +17,13 @@ const connectors = connectorsForWallets([
     groupName: "Recommended",
     wallets: [
       wallet.metaMask({ chains }),
+      wallet.walletConnect({ chains })
     ],
   },
 ])
 
 const wagmiClient = createClient({
-  autoConnect: true,
+  autoConnect: false,
   connectors,
   provider,
 })

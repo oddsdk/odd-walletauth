@@ -1,8 +1,8 @@
 import * as storage from "webnative/storage/index.js"
 import * as wn from "webnative"
-import { Web3Provider } from "@ethersproject/providers"
 import { useEffect, useState } from "react"
 import { useAccount } from "wagmi"
+import Provider from "eip1193-provider"
 
 import Header from "./components/Header"
 import SignMessage from "./components/SignMessage"
@@ -32,8 +32,8 @@ const App = () => {
   }, [ isConnected, account.connector ])
 
   useEffect(() => {
-    async function setup(prov: Web3Provider) {
-      console.log("🚀 Setting up")
+    async function setup(prov: Provider) {
+      console.log("💎 Setting up")
       ethereum.setProvider(prov)
 
       setDidSetup(true)

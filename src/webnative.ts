@@ -72,7 +72,7 @@ export async function login(): Promise<FileSystem | null> {
       const fs = await login()
 
       if (fs && await fs.hasPublicExchangeKey() === false) {
-        // await fs.addPublicExchangeKey()
+        await fs.addPublicExchangeKey()
         await fs.mkdir(wn.path.directory("private", "Apps"))
         await fs.mkdir(wn.path.directory("private", "Audio"))
         await fs.mkdir(wn.path.directory("private", "Documents"))

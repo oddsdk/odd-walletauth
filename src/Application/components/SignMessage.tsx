@@ -19,7 +19,7 @@ const SignMessage = () => {
     return webnative.createUcan({
       audience: webnative.FISSION_API_DID,
       issuer: await ethereum.did(),
-      lifetimeInSeconds: 30,
+      lifetimeInSeconds: 90,
     }).then(async (ucan: Ucan) => {
       setShowRejectionModal(false)
       const isUcanVerified = await webnative.verifyUcanSignature(ucan)
