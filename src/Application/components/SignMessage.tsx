@@ -1,4 +1,3 @@
-import * as wn from "webnative"
 import { useMemo, useState } from "react"
 import { useAccount } from "wagmi";
 import { Ucan } from "webnative/ucan/types.js"
@@ -41,18 +40,6 @@ const SignMessage = () => {
    */
   useMemo(async () => {
     // signUcanMessage()
-
-    wn.setup.debug({ enabled: true })
-    wn.setup.endpoints({
-      api: "https://runfission.net",
-      lobby: "https://auth.runfission.net",
-      user: "fissionuser.net"
-    })
-
-    const fs = await webnative.login()
-    if (!fs) throw new Error("Was not able to load the filesystem")
-
-    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
   }, [ isConnected ])
 
   return (

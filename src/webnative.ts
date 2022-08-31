@@ -1,6 +1,7 @@
+import * as debug from "webnative/common/debug.js"
+import * as ucanInternal from "webnative/ucan/internal.js"
 import * as uint8arrays from "uint8arrays"
 import * as wn from "webnative"
-import * as debug from "webnative/common/debug.js"
 
 import { CID } from "multiformats/cid"
 import { decodeCID } from "webnative/common/cid.js"
@@ -59,14 +60,19 @@ export async function login(): Promise<FileSystem | null> {
         lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
       })
 
-      storage.setItem(USERNAME_STORAGE_KEY, username)
-      storage.setItem("ucan", wn.ucan.encode(ucan))
+      await storage.setItem(USERNAME_STORAGE_KEY, username)
+      await storage.setItem("ucan", wn.ucan.encode(ucan))
+
+      // TESTING
+      await storage.setItem("readKey", "LXgKMw66/Kguo2Fd/zDNd/LcbXeoeikMKxnQ/nDcfLs=")
+      await wn.lobby.storeFileSystemRootKey("LXgKMw66/Kguo2Fd/zDNd/LcbXeoeikMKxnQ/nDcfLs=")
+      await ucanInternal.store([ wn.ucan.encode(ucan) ])
 
       // Load FS
       const fs = await login()
 
-      if (fs) {
-        await fs.addPublicExchangeKey()
+      if (fs && await fs.hasPublicExchangeKey() === false) {
+        // await fs.addPublicExchangeKey()
         await fs.mkdir(wn.path.directory("private", "Apps"))
         await fs.mkdir(wn.path.directory("private", "Audio"))
         await fs.mkdir(wn.path.directory("private", "Documents"))

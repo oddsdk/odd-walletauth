@@ -7,7 +7,6 @@ import * as uint8arrays from "uint8arrays"
 import { Web3Provider } from "@ethersproject/providers"
 import { ethers } from "ethers"
 import { keccak_256 } from "@noble/hashes/sha3"
-import Web3Modal from "web3modal"
 
 import { isStringArray } from "./common"
 
@@ -38,6 +37,7 @@ export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
+let provider: Web3Provider | null = null
 
 
 
@@ -51,6 +51,7 @@ export async function address(): Promise<string> {
 
   await ethereum
     .send("eth_accounts", [])
+    .then(getResult)
     .then(handleAccountsChanged)
     .catch((err: ProviderRpcError) => {
       // Some unexpected error.
@@ -68,8 +69,8 @@ export async function address(): Promise<string> {
 
 
 export async function chainId(): Promise<number> {
-  const ethereum = await load()
-  const id = (await ethereum.getNetwork()).chainId
+  const ethereum: any = await load()
+  const id = ethereum.chainId || (await ethereum.getNetwork()).chainId
   return id
 }
 
@@ -80,6 +81,7 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
 
   return ethereum
     .send("eth_decrypt", [ uint8arrays.toString(encryptedMessage, "utf8"), account ])
+    .then(getResult)
     .then(resp => {
       try {
         return JSON.parse(resp).data
@@ -126,9 +128,7 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
 
 
 export async function load(): Promise<Web3Provider> {
-  const web3Modal = new Web3Modal()
-  const instance = await web3Modal.connect()
-  const provider = new ethers.providers.Web3Provider(instance)
+  if (!provider) throw new Error("Provider was not set yet")
 
   // events
   provider.on("accountsChanged", handleAccountsChanged)
@@ -149,6 +149,7 @@ export async function publicEncryptionKey(): Promise<Uint8Array> {
       "eth_getEncryptionPublicKey",
       [ account ]
     )
+    .then(getResult)
     .catch((error: ProviderRpcError) => {
       if (error.code === 4001) {
         // EIP-1193 userRejectedRequest error
@@ -183,6 +184,11 @@ export async function publicSignatureKey(): Promise<Uint8Array> {
 }
 
 
+export function setProvider(p: Web3Provider) {
+  provider = p
+}
+
+
 export async function sign(data: Uint8Array): Promise<Uint8Array> {
   const ethereum = await load()
 
@@ -192,9 +198,9 @@ export async function sign(data: Uint8Array): Promise<Uint8Array> {
       uint8arrays.toString(data, "hex"),
       await address()
     ]
-  ).then(
-    uint8ArrayFromEthereumHex
   )
+    .then(getResult)
+    .then(uint8ArrayFromEthereumHex)
 }
 
 
@@ -222,6 +228,11 @@ export function deconstructSignature(signature: Uint8Array): Signature {
     compact: uint8ArrayFromEthereumHex(parts.compact),
     full: uint8arrays.concat([ r, s ])
   }
+}
+
+
+export function getResult(a: any): any {
+  return a.result ? a.result : a
 }
 
 
