@@ -6,7 +6,6 @@ import * as wn from "webnative"
 import { CID } from "multiformats/cid"
 import { decodeCID } from "webnative/common/cid.js"
 import { getSimpleLinks } from "webnative/fs/protocol/basic.js"
-import RootTree from "webnative/fs/root/tree.js"
 import { PublicFile } from "webnative/fs/v1/PublicFile.js"
 import { PublicTree } from "webnative/fs/v1/PublicTree.js"
 import { Resource, Ucan } from "webnative/ucan/types.js"
@@ -31,90 +30,45 @@ export const READ_KEY_PATH = wn.path.file(wn.path.Branch.Public, ".well-known", 
 // 🚀
 
 
-export async function login(): Promise<FileSystem | null> {
-  const appState = await wn.app({
-    useWnfs: true
-  })
+export async function login(reset: boolean = false): Promise<FileSystem | null> {
+  let dataRoot, fs
 
-  switch (appState.scenario) {
-    case AppScenario.NotAuthed:
-      console.log("NotAuthed")
-      const username = await ethereum.username()
-      const isNewUser = await hasFissionAccount(username) === false
-      const ethereumDID = await ethereum.did()
-      const webnativeDID = await wn.did.ucan()
-
-      // Create user if necessary
-      console.log("isNewUser", isNewUser)
-      if (isNewUser) {
-        console.log("Creating new Fission account", ethereumDID)
-        const { success } = await createFissionAccount(ethereumDID)
-        if (!success) manageError("Failed to create Fission user")
-      }
-
-      // Authenticate
-      const ucan = await createUcan({
-        issuer: ethereumDID,
-        audience: webnativeDID,
-        potency: "SUPER_USER",
-        lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
-      })
-
-      await storage.setItem(USERNAME_STORAGE_KEY, username)
-      await storage.setItem("ucan", wn.ucan.encode(ucan))
-
-      // TESTING
-      await storage.setItem("readKey", "LXgKMw66/Kguo2Fd/zDNd/LcbXeoeikMKxnQ/nDcfLs=")
-      await wn.lobby.storeFileSystemRootKey("LXgKMw66/Kguo2Fd/zDNd/LcbXeoeikMKxnQ/nDcfLs=")
-      await ucanInternal.store([ wn.ucan.encode(ucan) ])
-
-      // Load FS
-      const fs = await login()
-
-      if (fs && await fs.hasPublicExchangeKey() === false) {
-        await fs.addPublicExchangeKey()
-        await fs.mkdir(wn.path.directory("private", "Apps"))
-        await fs.mkdir(wn.path.directory("private", "Audio"))
-        await fs.mkdir(wn.path.directory("private", "Documents"))
-        await fs.mkdir(wn.path.directory("private", "Photos"))
-        await fs.mkdir(wn.path.directory("private", "Video"))
-        await fs.publish()
-      }
-
-      return fs
-
-    case AppScenario.Authed:
-      console.log("Authed")
-      return appState.fs || null
-  }
-}
-
-
-/**
- * Log into Fission with Ethereum.
- */
-export async function loginWithEncryptedReadKey(): Promise<FileSystem> {
-  let dataRoot
+  if (reset) await wn.leave({ withoutRedirect: true })
 
   const username = await ethereum.username()
   const isNewUser = await hasFissionAccount(username) === false
+  const authenticatedUsername = await wn.authenticatedUsername()
 
-  console.log("isNewUser", isNewUser)
+  // Authenticate & create user if necessary
+  if (!authenticatedUsername) {
+    const ethereumDID = await ethereum.did()
+    const webnativeDID = await wn.did.ucan()
 
-  // Create user if necessary
-  if (isNewUser) {
-    console.log("Creating new Fission account")
-    const { success } = await createFissionAccount(await ethereum.did())
-    if (!success) manageError("Failed to create Fission user")
+    console.log("isNewUser", isNewUser)
+
+    if (isNewUser) {
+      console.log("Creating new Fission account")
+      const { success } = await createFissionAccount(ethereumDID)
+      if (!success) manageError("Failed to create Fission user")
+    }
+
+    const ucan = wn.ucan.encode(await createUcan({
+      issuer: ethereumDID,
+      audience: webnativeDID,
+      potency: "SUPER_USER",
+      lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
+    }))
+
+    await storage.setItem(USERNAME_STORAGE_KEY, username)
+    await storage.setItem("ucan", ucan)
+    await ucanInternal.store([ ucan ])
   }
 
   // Load, or create, WNFS
   console.log("Looking up data root")
   dataRoot = isNewUser ? null : await wn.dataRoot.lookup(username)
 
-  let fs
-
-  if (!dataRoot) {
+  if (!dataRoot || reset) {
     // New user or new FS
     const readKey = await wn.crypto.aes.genKeyStr()
 
@@ -122,7 +76,6 @@ export async function loginWithEncryptedReadKey(): Promise<FileSystem> {
     fs = await wn.fs.empty({
       permissions: WNFS_PERMISSIONS,
       rootKey: readKey,
-      localOnly: true
     })
 
     await fs.write(
@@ -136,8 +89,8 @@ export async function loginWithEncryptedReadKey(): Promise<FileSystem> {
     await fs.mkdir(wn.path.directory("private", "Documents"))
     await fs.mkdir(wn.path.directory("private", "Photos"))
     await fs.mkdir(wn.path.directory("private", "Video"))
+    await fs.publish()
 
-    await updateDataRoot(await fs.root.put())
     console.log("Published")
 
     return fs
@@ -165,19 +118,161 @@ export async function loginWithEncryptedReadKey(): Promise<FileSystem> {
 
     const readKey = await decryptReadKey(encryptedReadKey as Uint8Array)
 
-    RootTree.storeRootKey(readKey)
+    wn.lobby.storeFileSystemRootKey(readKey)
 
-    fs = await wn.fs.fromCID(
-      dataRoot,
-      { localOnly: true, permissions: WNFS_PERMISSIONS }
-    )
-
-    if (!fs) throw new Error("Was unable to load the filesystem from the data root: " + dataRoot)
-
-    return fs
+    return await wn.loadFileSystem(WNFS_PERMISSIONS, username, readKey)
 
   }
 }
+
+
+// export async function loginWithLinking(): Promise<FileSystem | null> {
+//   const appState = await wn.app({
+//     useWnfs: true
+//   })
+
+//   switch (appState.scenario) {
+//     case AppScenario.NotAuthed:
+//       console.log("NotAuthed")
+//       const username = await ethereum.username()
+//       const isNewUser = await hasFissionAccount(username) === false
+//       const ethereumDID = await ethereum.did()
+//       const webnativeDID = await wn.did.ucan()
+
+//       // Create user if necessary
+//       console.log("isNewUser", isNewUser)
+//       if (isNewUser) {
+//         console.log("Creating new Fission account", ethereumDID)
+//         const { success } = await createFissionAccount(ethereumDID)
+//         if (!success) manageError("Failed to create Fission user")
+//       }
+
+//       // Authenticate
+//       const ucan = await createUcan({
+//         issuer: ethereumDID,
+//         audience: webnativeDID,
+//         potency: "SUPER_USER",
+//         lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
+//       })
+
+//       await storage.setItem(USERNAME_STORAGE_KEY, username)
+//       await storage.setItem("ucan", wn.ucan.encode(ucan))
+
+//       // TESTING
+//       // await storage.setItem("readKey", "LXgKMw66/Kguo2Fd/zDNd/LcbXeoeikMKxnQ/nDcfLs=")
+//       // await wn.lobby.storeFileSystemRootKey("LXgKMw66/Kguo2Fd/zDNd/LcbXeoeikMKxnQ/nDcfLs=")
+//       // await ucanInternal.store([ wn.ucan.encode(ucan) ])
+
+//       // Load FS
+//       const fs = await login()
+
+//       if (fs && await fs.hasPublicExchangeKey() === false) {
+//         await fs.addPublicExchangeKey()
+//         await fs.mkdir(wn.path.directory("private", "Apps"))
+//         await fs.mkdir(wn.path.directory("private", "Audio"))
+//         await fs.mkdir(wn.path.directory("private", "Documents"))
+//         await fs.mkdir(wn.path.directory("private", "Photos"))
+//         await fs.mkdir(wn.path.directory("private", "Video"))
+//         await fs.publish()
+//       }
+
+//       return fs
+
+//     case AppScenario.Authed:
+//       console.log("Authed")
+//       return appState.fs || null
+//   }
+// }
+
+
+// /**
+//  * Log into Fission with Ethereum.
+//  */
+// export async function loginWithEncryptedReadKey(): Promise<FileSystem> {
+//   let dataRoot
+
+//   const username = await ethereum.username()
+//   const isNewUser = await hasFissionAccount(username) === false
+
+//   console.log("isNewUser", isNewUser)
+
+//   // Create user if necessary
+//   if (isNewUser) {
+//     console.log("Creating new Fission account")
+//     const { success } = await createFissionAccount(await ethereum.did())
+//     if (!success) manageError("Failed to create Fission user")
+//   }
+
+//   // Load, or create, WNFS
+//   console.log("Looking up data root")
+//   dataRoot = isNewUser ? null : await wn.dataRoot.lookup(username)
+
+//   let fs
+
+//   if (!dataRoot) {
+//     // New user or new FS
+//     const readKey = await wn.crypto.aes.genKeyStr()
+
+//     console.log("Creating new WNFS")
+//     fs = await wn.fs.empty({
+//       permissions: WNFS_PERMISSIONS,
+//       rootKey: readKey,
+//       localOnly: true
+//     })
+
+//     await fs.write(
+//       READ_KEY_PATH,
+//       await encryptReadKey(readKey)
+//     )
+
+//     await fs.addPublicExchangeKey()
+//     await fs.mkdir(wn.path.directory("private", "Apps"))
+//     await fs.mkdir(wn.path.directory("private", "Audio"))
+//     await fs.mkdir(wn.path.directory("private", "Documents"))
+//     await fs.mkdir(wn.path.directory("private", "Photos"))
+//     await fs.mkdir(wn.path.directory("private", "Video"))
+
+//     await updateDataRoot(await fs.root.put())
+//     console.log("Published")
+
+//     return fs
+
+//   } else {
+//     // Existing user & FS
+//     const publicCid = decodeCID((await getSimpleLinks(dataRoot)).public.cid)
+//     const publicTree = await PublicTree.fromCID(publicCid)
+//     const unwrappedPath = wn.path.unwrap(READ_KEY_PATH)
+//     const publicPath = unwrappedPath.slice(1)
+//     const readKeyChild = await publicTree.get(publicPath)
+
+//     if (!readKeyChild) {
+//       throw new Error(`Expected an encrypted read key at: ${wn.path.log(publicPath)}`)
+//     }
+
+//     if (!PublicFile.instanceOf(readKeyChild)) {
+//       throw new Error(`Did not expect a tree at: ${wn.path.log(publicPath)}`)
+//     }
+
+//     const encryptedReadKey = readKeyChild.content
+//     if (encryptedReadKey.constructor.name !== "Uint8Array") {
+//       throw new Error("The read key was not a Uint8Array as we expected")
+//     }
+
+//     const readKey = await decryptReadKey(encryptedReadKey as Uint8Array)
+
+//     wn.lobby.storeFileSystemRootKey(readKey)
+
+//     fs = await wn.fs.fromCID(
+//       dataRoot,
+//       { localOnly: true, permissions: WNFS_PERMISSIONS }
+//     )
+
+//     if (!fs) throw new Error("Was unable to load the filesystem from the data root: " + dataRoot)
+
+//     return fs
+
+//   }
+// }
 
 
 
