@@ -1,14 +1,14 @@
 import type { ProviderRpcError } from "eip1193-provider"
+import type { Implementation } from "./types.js"
 
-import * as guards from "@sniptt/guards"
 import * as secp from "@noble/secp256k1"
 import * as sigUtil from "@metamask/eth-sig-util"
 import * as uint8arrays from "uint8arrays"
 import { ethers } from "ethers"
 import { keccak_256 } from "@noble/hashes/sha3"
-
-import { isStringArray } from "./common"
 import Provider from "eip1193-provider"
+
+import { isStringArray } from "../../common.js"
 
 
 // ⛰
@@ -156,7 +156,7 @@ export async function publicEncryptionKey(): Promise<Uint8Array> {
       }
     })
 
-  if (!guards.isString(key)) {
+  if (typeof key !== "string") {
     throw new Error("Expected ethereumPublicKey to be a string")
   }
 
@@ -295,3 +295,19 @@ function handleAccountsChanged(accounts: unknown) {
     }
   }
 }
+
+
+
+// 🛳
+
+
+export const implementation: Implementation = {
+  did,
+  publicSignatureKey,
+  sign,
+  username,
+  verifySignedMessage,
+}
+
+
+export const ETHEREUM_IMPLEMENTATION = implementation
