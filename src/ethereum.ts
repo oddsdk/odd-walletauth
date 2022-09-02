@@ -4,12 +4,11 @@ import * as guards from "@sniptt/guards"
 import * as secp from "@noble/secp256k1"
 import * as sigUtil from "@metamask/eth-sig-util"
 import * as uint8arrays from "uint8arrays"
-import { Web3Provider } from "@ethersproject/providers"
 import { ethers } from "ethers"
 import { keccak_256 } from "@noble/hashes/sha3"
-import Web3Modal from "web3modal"
 
 import { isStringArray } from "./common"
+import Provider from "eip1193-provider"
 
 
 // ⛰
@@ -27,7 +26,7 @@ type Signature = {
 }
 
 
-export const MSG_TO_SIGN = uint8arrays.fromString("Hello there, would you like to sign this so we can generate a DID?", "utf8")
+export const MSG_TO_SIGN = uint8arrays.fromString("Hi there, would you like to sign this so we can generate a DID for you?", "utf8")
 export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 
 
@@ -38,6 +37,7 @@ export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
+let provider: Provider | null = null
 
 
 
@@ -50,7 +50,8 @@ export async function address(): Promise<string> {
   const ethereum = await load()
 
   await ethereum
-    .send("eth_accounts", [])
+    .request({ method: "eth_accounts", params: [] })
+    .then(getResult)
     .then(handleAccountsChanged)
     .catch((err: ProviderRpcError) => {
       // Some unexpected error.
@@ -68,8 +69,8 @@ export async function address(): Promise<string> {
 
 
 export async function chainId(): Promise<number> {
-  const ethereum = await load()
-  const id = (await ethereum.getNetwork()).chainId
+  const ethereum: any = await load()
+  const id = ethereum.chainId || (await ethereum.getNetwork()).chainId
   return id
 }
 
@@ -79,7 +80,8 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
   const account = await address()
 
   return ethereum
-    .send("eth_decrypt", [ uint8arrays.toString(encryptedMessage, "utf8"), account ])
+    .request({ method: "eth_decrypt", params: [ uint8arrays.toString(encryptedMessage, "utf8"), account ] })
+    .then(getResult)
     .then(resp => {
       try {
         return JSON.parse(resp).data
@@ -87,14 +89,13 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
         return resp
       }
     })
-    .then(resp => uint8arrays.fromString(resp, "utf8"))
+    .then(resp => uint8arrays.fromString(resp, "base64pad"))
 }
 
 
 export async function did(): Promise<string> {
   const key = await publicSignatureKey()
   const arr = uint8arrays.concat([ SECP_PREFIX, key ])
-  console.log(uint8arrays.toString(key, "base64pad"))
 
   return `did:key:z${uint8arrays.toString(arr, "base58btc")}`
 }
@@ -113,7 +114,7 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
   // ciphertext, ephemPublicKey, nonce, version
   const encrypted = sigUtil.encryptSafely({
     publicKey: uint8arrays.toString(encryptionPublicKey, "base64pad"),
-    data: uint8arrays.toString(data, "utf8"),
+    data: uint8arrays.toString(data, "base64pad"),
     version: "x25519-xsalsa20-poly1305",
   })
 
@@ -126,10 +127,8 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
 }
 
 
-export async function load(): Promise<Web3Provider> {
-  const web3Modal = new Web3Modal()
-  const instance = await web3Modal.connect()
-  const provider = new ethers.providers.Web3Provider(instance)
+export async function load(): Promise<Provider> {
+  if (!provider) throw new Error("Provider was not set yet")
 
   // events
   provider.on("accountsChanged", handleAccountsChanged)
@@ -146,10 +145,8 @@ export async function publicEncryptionKey(): Promise<Uint8Array> {
   const account = await address()
 
   const key: unknown = await ethereum
-    .send(
-      "eth_getEncryptionPublicKey",
-      [ account ]
-    )
+    .request({ method: "eth_getEncryptionPublicKey", params: [ account ] })
+    .then(getResult)
     .catch((error: ProviderRpcError) => {
       if (error.code === 4001) {
         // EIP-1193 userRejectedRequest error
@@ -184,18 +181,22 @@ export async function publicSignatureKey(): Promise<Uint8Array> {
 }
 
 
+export function setProvider(p: Provider) {
+  provider = p
+}
+
+
 export async function sign(data: Uint8Array): Promise<Uint8Array> {
   const ethereum = await load()
 
-  return ethereum.send(
-    "personal_sign",
-    [
-      uint8arrays.toString(data, "hex"),
-      await address()
+  return ethereum.request({
+    method: "personal_sign", params: [
+      uint8ArrayToEthereumHex(data),
+      await address(),
     ]
-  ).then(
-    uint8ArrayFromEthereumHex
-  )
+  })
+    .then(getResult)
+    .then(uint8ArrayFromEthereumHex)
 }
 
 
@@ -223,6 +224,11 @@ export function deconstructSignature(signature: Uint8Array): Signature {
     compact: uint8ArrayFromEthereumHex(parts.compact),
     full: uint8arrays.concat([ r, s ])
   }
+}
+
+
+export function getResult(a: any): any {
+  return a.result ? a.result : a
 }
 
 
@@ -266,7 +272,7 @@ export async function verifyPublicKey(): Promise<boolean> {
 
 export async function verifySignedMessage(
   { signature, message, publicKey }:
-  { signature: Uint8Array, message: Uint8Array, publicKey: Uint8Array }
+    { signature: Uint8Array, message: Uint8Array, publicKey: Uint8Array }
 ): Promise<boolean> {
   return secp.verify(
     deconstructSignature(signature).full,
@@ -282,10 +288,10 @@ export async function verifySignedMessage(
 
 function handleAccountsChanged(accounts: unknown) {
   if (isStringArray(accounts)) {
-    if (!accounts[0]) {
+    if (!accounts[ 0 ]) {
       console.warn("Please connect to Ethereum/Metamask.")
-    } else if (accounts[0] !== globCurrentAccount) {
-      globCurrentAccount = accounts[0]
+    } else if (accounts[ 0 ] !== globCurrentAccount) {
+      globCurrentAccount = accounts[ 0 ]
     }
   }
 }

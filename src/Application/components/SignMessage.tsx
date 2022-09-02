@@ -1,37 +1,39 @@
+import * as wn from "webnative"
 import { useMemo, useState } from "react"
-import { useAccount } from "wagmi";
-import { Ucan } from "webnative/ucan/types";
+import { useAccount } from "wagmi"
+
+import * as api from "webnative/common/api.js"
+import { AppScenario } from "webnative"
+import { Ucan } from "webnative/ucan/types.js"
 
 import * as ethereum from "../../ethereum"
 import * as webnative from "../../webnative"
 import WelcomeCheckIcon from "./icons/WelcomeCheckIcon"
 
+
 const SignMessage = () => {
-  const [isVerified, setIsVerified] = useState(false)
-  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [ isVerified, setIsVerified ] = useState(false)
+  const [ showRejectionModal, setShowRejectionModal ] = useState(false)
   const { isConnected } = useAccount()
 
   /**
    * Have the user sign a message to generate and verify a Ucan for them
    */
   const signUcanMessage: () => Promise<void> = async () => {
-    let ucan: Ucan
-    try {
-      ucan = await webnative.createUcan({
-        audience: webnative.FISSION_API_DID,
-        issuer: await ethereum.did(),
-        lifetimeInSeconds: 30,
-      })
-      setShowRejectionModal(false);
-    } catch (error) {
-      console.error('User rejected signature')
-      setShowRejectionModal(true)
-    }
-
-    if (!!ucan) {
+    return webnative.createUcan({
+      audience: await api.did(),
+      issuer: await ethereum.did(),
+      lifetimeInSeconds: 90,
+    }).then(async (ucan: Ucan) => {
+      setShowRejectionModal(false)
       const isUcanVerified = await webnative.verifyUcanSignature(ucan)
       setIsVerified(isUcanVerified)
-    }
+
+    }).catch(() => {
+      console.error("User rejected signature")
+      setShowRejectionModal(true)
+
+    })
   }
 
   const handleCloseModal = () => setShowRejectionModal(false);
@@ -40,9 +42,27 @@ const SignMessage = () => {
    * I'm leaving this here for now to preserve the existing behaviour for testing purposes.
    * This will function quite differently once we have all the different pieces working
    */
-  useMemo(() => {
-    signUcanMessage()
-  }, [isConnected])
+  useMemo(async () => {
+    let fs
+    const state = await webnative.app({ resetWnfs: location.search.includes("reset") })
+
+    switch (state.scenario) {
+      case AppScenario.Authed:
+        fs = state.fs
+        break
+
+      case AppScenario.NotAuthed:
+        throw new Error("Didn't expect this to happen")
+        break
+    }
+
+    if (!fs) throw new Error("Was not able to load the filesystem")
+
+    // @ts-ignore
+    window.fs = fs
+
+    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
+  }, [])
 
   return (
     <div className="flex items-center justify-center text-center h-screenWithoutNav max-w-xs m-auto">
