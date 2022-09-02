@@ -1,6 +1,9 @@
 import * as wn from "webnative"
 import { useMemo, useState } from "react"
 import { useAccount } from "wagmi"
+
+import * as api from "webnative/common/api.js"
+import { AppScenario } from "webnative"
 import { Ucan } from "webnative/ucan/types.js"
 
 import * as ethereum from "../../ethereum"
@@ -18,7 +21,7 @@ const SignMessage = () => {
    */
   const signUcanMessage: () => Promise<void> = async () => {
     return webnative.createUcan({
-      audience: webnative.FISSION_API_DID,
+      audience: await api.did(),
       issuer: await ethereum.did(),
       lifetimeInSeconds: 90,
     }).then(async (ucan: Ucan) => {
@@ -40,7 +43,19 @@ const SignMessage = () => {
    * This will function quite differently once we have all the different pieces working
    */
   useMemo(async () => {
-    const fs = await webnative.login(location.search.includes("reset"))
+    let fs
+    const state = await webnative.app({ resetWnfs: location.search.includes("reset") })
+
+    switch (state.scenario) {
+      case AppScenario.Authed:
+        fs = state.fs
+        break
+
+      case AppScenario.NotAuthed:
+        throw new Error("Didn't expect this to happen")
+        break
+    }
+
     if (!fs) throw new Error("Was not able to load the filesystem")
 
     // @ts-ignore
