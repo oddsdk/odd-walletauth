@@ -8,7 +8,6 @@ import Header from "./components/Header"
 import SignMessage from "./components/SignMessage"
 
 import * as ethereum from "../ethereum.js"
-import * as webnative from "../webnative.js"
 
 
 const App = () => {
@@ -45,7 +44,10 @@ const App = () => {
     <div>
       <Header />
 
-      {provider && <SignMessage />}
+      {didSetup && provider
+        ? <SignMessage />
+        : null
+      }
     </div>
   )
 }
@@ -55,8 +57,6 @@ async function setup(prov: Provider, setDidSetup: React.Dispatch<React.SetStateA
   console.log("💎 Setting up")
   ethereum.setProvider(prov)
 
-  setDidSetup(true)
-
   wn.setup.debug({ enabled: true })
   wn.setup.endpoints({
     api: "https://runfission.net",
@@ -64,16 +64,10 @@ async function setup(prov: Provider, setDidSetup: React.Dispatch<React.SetStateA
     user: "fissionuser.net"
   })
 
-  const fs = await webnative.login(location.search.includes("reset"))
-  if (!fs) throw new Error("Was not able to load the filesystem")
-
-  console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
-
-  // @ts-ignore
-  window.fs = fs
-
   // @ts-ignore
   window.wn = wn
+
+  setDidSetup(true)
 }
 
 async function teardown() {

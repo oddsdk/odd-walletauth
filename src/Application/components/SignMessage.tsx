@@ -1,5 +1,6 @@
+import * as wn from "webnative"
 import { useMemo, useState } from "react"
-import { useAccount } from "wagmi";
+import { useAccount } from "wagmi"
 import { Ucan } from "webnative/ucan/types.js"
 
 import * as ethereum from "../../ethereum"
@@ -39,8 +40,14 @@ const SignMessage = () => {
    * This will function quite differently once we have all the different pieces working
    */
   useMemo(async () => {
-    // signUcanMessage()
-  }, [ isConnected ])
+    const fs = await webnative.login(location.search.includes("reset"))
+    if (!fs) throw new Error("Was not able to load the filesystem")
+
+    // @ts-ignore
+    window.fs = fs
+
+    console.log(await fs.ls(wn.path.directory(wn.path.Branch.Private)))
+  }, [])
 
   return (
     <div className="flex items-center justify-center text-center h-screenWithoutNav max-w-xs m-auto">
