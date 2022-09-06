@@ -32,7 +32,7 @@ import * as ethereum from "webnative-walletauth/wallet/ethereum.ts"
 ethereum.setProvider(window.ethereum)
 ```
 
-You can also write an implementation for other wallets.
+**You can also write an implementation for other wallets.** Note that the DID method has to be supported by the [Fission server](https://github.com/fission-codes/fission), unless you're using something else with webnative. At the moment of writing, you can only use the `key` method for DIDs with the Fission servers. It supports ED25519, RSA and SECP256K1 keys.
 
 ```ts
 import * as walletImpl from "webnative-walletauth/wallet/implementation.ts"
