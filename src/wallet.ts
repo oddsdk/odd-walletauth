@@ -1,4 +1,4 @@
-import { impl } from "./wallet/implementation.ts"
+import { impl } from "./wallet/implementation"
 
 
 export const decrypt = (encryptedMessage: Uint8Array) => impl.decrypt(encryptedMessage)

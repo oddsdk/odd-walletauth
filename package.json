@@ -1,0 +1,35 @@
+{
+  "name": "webnative-walletauth",
+  "version": "0.0.1",
+  "description": "Use the [Webnative SDK](https://github.com/fission-codes/webnative#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fission-codes/webnative-walletauth.git"
+  },
+  "keywords": [
+    "webnative",
+    "walletauth",
+    "wallet",
+    "metamask",
+    "ethereum"
+  ],
+  "author": "icidasset",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/fission-codes/webnative-walletauth/issues"
+  },
+  "homepage": "https://github.com/fission-codes/webnative-walletauth#readme",
+  "dependencies": {
+    "@noble/hashes": "^1.1.2",
+    "@noble/secp256k1": "^1.6.3",
+    "crypto": "^1.0.1",
+    "eip1193-provider": "^1.0.1",
+    "tweetnacl": "^1.0.3",
+    "uint8arrays": "^3.1.0",
+    "webnative": "^0.34.1"
+  }
+}

@@ -1,5 +1,5 @@
 import type { ProviderRpcError } from "eip1193-provider"
-import type { Implementation } from "./types.ts"
+import type { Implementation } from "./types"
 
 import * as nacl from "tweetnacl"
 import * as secp from "@noble/secp256k1"
@@ -7,7 +7,7 @@ import * as uint8arrays from "uint8arrays"
 import { keccak_256 } from "@noble/hashes/sha3"
 import Provider from "eip1193-provider"
 
-import { hasProp, isString, isStringArray } from "../common.ts"
+import { hasProp, isString, isStringArray } from "../common"
 
 
 // ⛰

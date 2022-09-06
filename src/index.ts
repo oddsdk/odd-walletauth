@@ -21,12 +21,12 @@ import { PublicFile } from "webnative/fs/v1/PublicFile.js"
 import { PublicTree } from "webnative/fs/v1/PublicTree.js"
 import FileSystem from "webnative/fs/filesystem.js"
 
-import * as readKey from "./read-key.ts"
-import * as walletUcan from "./ucan.ts"
-import * as wallet from "./wallet.ts"
+import * as readKey from "./read-key"
+import * as walletUcan from "./ucan"
+import * as wallet from "./wallet"
 
-import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation.ts"
-import { hasProp } from "./common.ts"
+import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation"
+import { hasProp } from "./common"
 
 
 
