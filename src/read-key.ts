@@ -1,15 +1,16 @@
 import * as uint8arrays from "uint8arrays"
+import * as wallet from "./wallet.ts"
 
 
 export async function decrypt(encrypted: Uint8Array): Promise<string> {
   return uint8arrays.toString(
-    await ethereum.decrypt(encrypted),
+    await wallet.decrypt(encrypted),
     "base64pad"
   )
 }
 
 export function encrypt(readKey: string): Promise<Uint8Array> {
-  return ethereum.encrypt(
+  return wallet.encrypt(
     uint8arrays.fromString(readKey, "base64pad")
   )
 }

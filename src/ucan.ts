@@ -1,8 +1,9 @@
 import * as uint8arrays from "uint8arrays"
+
 import { encodeHeader, encodePayload } from "webnative/ucan/index.js"
 import { Resource, Ucan } from "webnative/ucan/types.js"
 
-import * as wallet from "./wallet.js"
+import * as wallet from "./wallet.ts"
 
 
 /**
@@ -44,8 +45,8 @@ export async function build({
     rsc: resource || "*",
   }
 
-  const encodedHeader = wn.ucan.encodeHeader(header)
-  const encodedPayload = wn.ucan.encodePayload(payload)
+  const encodedHeader = encodeHeader(header)
+  const encodedPayload = encodePayload(payload)
   const signature = uint8arrays.toString(
     await wallet.sign(
       uint8arrays.fromString(
@@ -68,7 +69,7 @@ export async function build({
 /**
  * Verify a ES256K UCAN signature.
  */
-export async function verifyUcanSignature(ucan: Ucan): Promise<boolean> {
+export function verifyUcanSignature(ucan: Ucan): Promise<boolean> {
   const message = uint8arrays.fromString(
     `${encodeHeader(ucan.header)}.${encodePayload(ucan.payload)}`,
     "utf8"
@@ -79,9 +80,8 @@ export async function verifyUcanSignature(ucan: Ucan): Promise<boolean> {
     "base64url"
   )
 
-  return ethereum.verifySignedMessage({
+  return wallet.verifySignedMessage({
     signature: signature,
     message,
-    publicKey: await ethereum.publicSignatureKey()
   })
 }

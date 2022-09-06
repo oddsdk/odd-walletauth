@@ -8,8 +8,8 @@ import * as storage from "webnative/storage/index.js"
 import * as ucan from "webnative/ucan/index.js"
 import * as ucanInternal from "webnative/ucan/internal.js"
 
-import { AppState, InitialisationError, authenticatedUsername, crypto, isSupported, loadFileSystem, leave } from "webnative"
-import { USERNAME_STORAGE_KEY } from "webnative/common/index.js"
+import { AppState, InitialisationError, crypto, isSupported, loadFileSystem } from "webnative"
+import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/index.js"
 
 import { decodeCID } from "webnative/common/cid.js"
 import { isUsernameAvailable, storeFileSystemRootKey } from "webnative/lobby/index.js"
@@ -20,11 +20,12 @@ import { PublicFile } from "webnative/fs/v1/PublicFile.js"
 import { PublicTree } from "webnative/fs/v1/PublicTree.js"
 import FileSystem from "webnative/fs/filesystem.js"
 
-import * as readKey from "./read-key.js"
-import * as walletUcan from "./ucan.js"
-import * as wallet from "./wallet.js"
+import * as readKey from "./read-key.ts"
+import * as walletUcan from "./ucan.ts"
+import * as wallet from "./wallet.ts"
 
-import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation.js"
+import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation.ts"
+import { hasProp } from "./common.ts"
 
 
 
@@ -49,10 +50,10 @@ export async function app(options?: { resetWnfs?: boolean, useWnfs?: boolean }):
 
   setImplementations(USE_WALLET_AUTH_IMPLEMENTATION)
 
-  if (resetWnfs) await leave({ withoutRedirect: true })
+  if (resetWnfs) await auth.leave({ withoutRedirect: true })
 
   // Check if browser is supported
-  if (globalThis.isSecureContext === false) throw InitialisationError.InsecureContext
+  if (hasProp(self, "isSecureContext") && self.isSecureContext === false) throw InitialisationError.InsecureContext
   if (await isSupported() === false) throw InitialisationError.UnsupportedBrowser
 
   const authedUsername = await authenticatedUsername()
