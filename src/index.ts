@@ -12,6 +12,7 @@ import { AppState, InitialisationError, crypto, isSupported, loadFileSystem } fr
 import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/index.js"
 
 import { decodeCID } from "webnative/common/cid.js"
+import { leave } from "webnative/auth.js"
 import { isUsernameAvailable, storeFileSystemRootKey } from "webnative/lobby/index.js"
 import { setImplementations } from "webnative/setup"
 
@@ -50,7 +51,7 @@ export async function app(options?: { resetWnfs?: boolean, useWnfs?: boolean }):
 
   setImplementations(USE_WALLET_AUTH_IMPLEMENTATION)
 
-  if (resetWnfs) await auth.leave({ withoutRedirect: true })
+  if (resetWnfs) await leave({ withoutRedirect: true })
 
   // Check if browser is supported
   if (hasProp(self, "isSecureContext") && self.isSecureContext === false) throw InitialisationError.InsecureContext

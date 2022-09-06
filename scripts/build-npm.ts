@@ -1,13 +1,15 @@
 import { build, emptyDir } from "https://deno.land/x/dnt@0.30.0/mod.ts";
 
-await emptyDir("./dist")
+await emptyDir("./npm")
 
 await build({
   entryPoints: [ "./src/index.ts" ],
   importMap: "./import-map.json",
-  outDir: "./dist",
+  outDir: "./npm",
   shims: {},
-  typeCheck: false,
+  compilerOptions: {
+    lib: ["es2020", "dom", "webworker"],
+  },
   package: {
     name: "webnative-walletauth",
     version: Deno.args[ 0 ],
@@ -21,14 +23,13 @@ await build({
       url: "https://github.com/fission-codes/webnative-walletauth/issues",
     },
     exports: {
-      "./*": {
-        "import": "./esm/*",
-        "require": "./script/*",
-        "types": "./types/*",
-      },
+      "./*": "./script/*",
     },
+    devDependencies: {
+      "events": "^3.3.0"
+    }
   },
 })
 
-Deno.copyFileSync("LICENSE", "dist/LICENSE")
-Deno.copyFileSync("README.md", "dist/README.md")
+Deno.copyFileSync("LICENSE", "npm/LICENSE")
+Deno.copyFileSync("README.md", "npm/README.md")
