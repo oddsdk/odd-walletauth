@@ -7,7 +7,7 @@ import * as uint8arrays from "uint8arrays"
 import { keccak_256 } from "@noble/hashes/sha3"
 import Provider from "eip1193-provider"
 
-import { hasProp, isString, isStringArray } from "../../common.ts"
+import { hasProp, isString, isStringArray } from "../common.ts"
 
 
 // ⛰
@@ -36,7 +36,7 @@ export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
-let provider: Provider | null = null
+let provider: Provider | null = hasProp(self, "ethereum") ? self.ethereum as Provider : null
 
 
 

@@ -3,15 +3,11 @@ Use the [Webnative SDK](https://github.com/fission-codes/webnative#readme) with 
 
 ## Usage
 
+Uses Ethereum by default with `window.ethereum` as the provider. Currently only works with MetaMask because it's the only wallet with encryption and decryption.
+
 ```ts
 import * as walletauth from "webnative-walletauth"
 import { AppScenario } from "webnative"
-
-// Set up Ethereum
-
-import * as ethereum from "webnative-walletauth/wallet/implementation/ethereum.ts"
-
-ethereum.setProvider(window.ethereum) // Metamask
 
 // Initialise
 
@@ -28,11 +24,19 @@ switch (appState.scenario) {
 }
 ```
 
-You can also use a custom wallet.
+Use a custom Ethereum provider:
+
+```ts
+import * as ethereum from "webnative-walletauth/wallet/ethereum.ts"
+
+ethereum.setProvider(window.ethereum)
+```
+
+You can also write an implementation for other wallets.
 
 ```ts
 import * as walletImpl from "webnative-walletauth/wallet/implementation.ts"
-import { Implementation } from "webnative-walletauth/wallet/implementation/types.ts"
+import { Implementation } from "webnative-walletauth/wallet/types.ts"
 
 
 const impl: Implementation = {

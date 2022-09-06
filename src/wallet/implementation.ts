@@ -1,5 +1,5 @@
-import { ETHEREUM_IMPLEMENTATION } from "./implementation/ethereum.ts"
-import { Implementation } from "./implementation/types.ts"
+import { ETHEREUM_IMPLEMENTATION } from "./ethereum.ts"
+import { Implementation } from "./types.ts"
 
 
 export let impl: Implementation = ETHEREUM_IMPLEMENTATION
