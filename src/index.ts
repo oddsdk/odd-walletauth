@@ -14,7 +14,7 @@ import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/in
 import { decodeCID } from "webnative/common/cid.js"
 import { leave } from "webnative/auth.js"
 import { isUsernameAvailable, storeFileSystemRootKey } from "webnative/lobby/index.js"
-import { setImplementations } from "webnative/setup"
+import { setImplementations } from "webnative/setup.js"
 
 import { getSimpleLinks } from "webnative/fs/protocol/basic.js"
 import { PublicFile } from "webnative/fs/v1/PublicFile.js"
@@ -42,7 +42,7 @@ export const READ_KEY_PATH = path.file(path.Branch.Public, ".well-known", "read-
 
 
 
-export async function app(options?: { resetWnfs?: boolean, useWnfs?: boolean }): Promise<AppState> {
+export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }): Promise<AppState> {
   let fs
 
   options = options || {}
@@ -137,7 +137,7 @@ export async function app(options?: { resetWnfs?: boolean, useWnfs?: boolean }):
 
       const rootKey = await readKey.decrypt(encryptedRootKey as Uint8Array)
 
-      storeFileSystemRootKey(rootKey)
+      await storeFileSystemRootKey(rootKey)
 
       fs = await loadFileSystem(ROOT_PERMISSIONS, username, rootKey)
 
