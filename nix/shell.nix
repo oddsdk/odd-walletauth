@@ -10,6 +10,7 @@
     ];
 
     languages = [
+      (pkgs.callPackage ./deno-1.25.nix { })
       nodejs-18_x
     ];
 
