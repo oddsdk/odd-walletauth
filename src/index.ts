@@ -10,7 +10,7 @@ import * as storage from "webnative/storage/index.js"
 import * as ucan from "webnative/ucan/index.js"
 import * as ucanInternal from "webnative/ucan/internal.js"
 
-import { AppState, InitialisationError, checkFileSystemVersion, crypto, isSupported, loadFileSystem } from "webnative"
+import { AppState, InitialisationError, checkFileSystemVersion, crypto, isSupported } from "webnative"
 import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/index.js"
 
 import { decodeCID } from "webnative/common/cid.js"
@@ -29,6 +29,8 @@ import * as wallet from "./wallet"
 
 import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation"
 import { hasProp } from "./common"
+
+import WalletAuthError from "./error-map"
 
 
 
@@ -71,7 +73,7 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
   if (!authedUsername) {
     if (isNewUser) {
       const { success } = await auth.register({ username })
-      if (!success) throw new Error("Failed to create Fission user")
+      if (!success) throw new Error(WalletAuthError.FailedToCreateUser)
     }
 
     // Authenticate
@@ -173,7 +175,7 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
 
       const encryptedRootKey = readKeyChild.content
       if (encryptedRootKey.constructor.name !== "Uint8Array") {
-        throw new Error("The read key was not a Uint8Array as we expected")
+        throw new Error(WalletAuthError.ExpectedReadKeyToBeUint8Array)
       }
 
       const rootKey = await readKey.decrypt(encryptedRootKey as Uint8Array)

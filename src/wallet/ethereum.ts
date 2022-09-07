@@ -8,6 +8,7 @@ import { keccak_256 } from "@noble/hashes/sha3"
 import Provider from "eip1193-provider"
 
 import { hasProp, isString, isStringArray } from "../common"
+import WalletAuthError from "../error-map"
 
 
 // ⛰
@@ -68,7 +69,7 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
     })
     .then(resp => {
       if (isString(resp)) return resp
-      else throw new Error("Expected to decrypt a string")
+      else throw new Error(WalletAuthError.ExpectedStringToDecrypt)
     })
     .then(resp => uint8arrays.fromString(resp, "base64pad"))
 }
@@ -131,7 +132,7 @@ export async function sign(data: Uint8Array): Promise<Uint8Array> {
     .then(getResult)
     .then(res => {
       if (isString(res)) return res
-      else throw new Error("Expected the result of `sign` to be a hexadecimal string")
+      else throw new Error(WalletAuthError.ExpectedSignToBeHexString)
     })
     .then(uint8ArrayFromEthereumHex)
 }
@@ -175,7 +176,7 @@ export async function address(): Promise<string> {
     })
 
   if (!globCurrentAccount) {
-    throw new Error("Failed to retrieve Ethereum account")
+    throw new Error(WalletAuthError.FailedAccountRetrieval)
   }
 
   return globCurrentAccount
@@ -183,7 +184,7 @@ export async function address(): Promise<string> {
 
 
 export function load(): Promise<Provider> {
-  if (!provider) throw new Error("Provider was not set yet")
+  if (!provider) throw new Error(WalletAuthError.ProviderNotSet)
 
   // events
   provider.on("accountsChanged", handleAccountsChanged)
@@ -212,7 +213,7 @@ export async function publicEncryptionKey(): Promise<Uint8Array> {
     })
 
   if (typeof key !== "string") {
-    throw new Error("Expected ethereumPublicKey to be a string")
+    throw new Error(WalletAuthError.ExpectedPubKeyToBeString)
   }
 
   globPublicEncryptionKey = uint8arrays.fromString(key, "base64pad")
@@ -292,8 +293,7 @@ export function splitSignature(signature: Uint8Array) {
     v = signature[ 64 ]
 
   } else {
-    throw new Error("Invalid signature length, must be 64 or 65 bytes")
-
+    throw new Error(WalletAuthError.InvalidSignatureLength)
   }
 
   // Allow a recid to be used as the v
