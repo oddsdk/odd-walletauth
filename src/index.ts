@@ -1,14 +1,16 @@
 import * as auth from "webnative/auth/index.js"
 import * as dataRoot from "webnative/data-root.js"
+import * as debug from "webnative/common/debug.js"
 import * as did from "webnative/did/index.js"
 import * as appState from "webnative/auth/state/app.js"
 import * as cidLog from "webnative/common/cid-log.js"
 import * as path from "webnative/path.js"
+import * as setup from "webnative/setup.js"
 import * as storage from "webnative/storage/index.js"
 import * as ucan from "webnative/ucan/index.js"
 import * as ucanInternal from "webnative/ucan/internal.js"
 
-import { AppState, InitialisationError, crypto, isSupported, loadFileSystem, setup } from "webnative"
+import { AppState, InitialisationError, checkFileSystemVersion, crypto, isSupported, loadFileSystem } from "webnative"
 import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/index.js"
 
 import { decodeCID } from "webnative/common/cid.js"
@@ -51,18 +53,21 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
 
   setImplementations(USE_WALLET_AUTH_IMPLEMENTATION)
 
-  if (resetWnfs) await leave({ withoutRedirect: true })
-
   // Check if browser is supported
   if (hasProp(self, "isSecureContext") && self.isSecureContext === false) throw InitialisationError.InsecureContext
   if (await isSupported() === false) throw InitialisationError.UnsupportedBrowser
 
-  const authedUsername = await authenticatedUsername()
-
   // Authenticate & create user if necessary
   const username = await wallet.username()
-  const isNewUser = await isUsernameAvailable(username) === false
+  const isNewUser = await isUsernameAvailable(username) === true
 
+  if (resetWnfs || isNewUser) await leave({ withoutRedirect: true })
+  const authedUsername = await authenticatedUsername()
+
+  // Ensure UCAN store
+  await ucanInternal.store([])
+
+  // Make new account if necessary & delegate to new key-pair
   if (!authedUsername) {
     if (isNewUser) {
       const { success } = await auth.register({ username })
@@ -81,16 +86,50 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
         lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
       }))
 
-      console.log(u)
-
       await ucanInternal.store([ u ])
     }
   }
 
+  // Create or load WNFS
   if (useWnfs) {
-    const dataPointer = isNewUser ? null : await dataRoot.lookup(username)
+    let cid
 
-    if (!dataPointer || resetWnfs) {
+    const isOnline = navigator.onLine
+    const dataPointer = isNewUser || resetWnfs || !isOnline ? null : await dataRoot.lookup(username)
+    const [ logIdx ] = dataPointer ? await cidLog.index(dataPointer.toString()) : [ -1, 0 ]
+
+    if (!isOnline) {
+      // Offline, use local CID
+      debug.log("📓 Offline, using last available file system")
+      cid = decodeCID(await cidLog.newest())
+
+    } else if (!dataPointer) {
+      // No DNS CID yet
+      cid = await cidLog.newest()
+      cid = cid ? decodeCID(cid) : null
+      if (cid) debug.log("📓 No DNSLink, using local CID:", cid.toString())
+      else debug.log("📓 Creating a new file system")
+
+    } else if (logIdx === 0) {
+      // DNS is up to date
+      cid = dataPointer
+      debug.log("📓 DNSLink is up to date:", cid.toString())
+
+    } else if (logIdx > 0) {
+      // DNS is outdated
+      cid = decodeCID(await cidLog.newest())
+      const idxLog = logIdx === 1 ? "1 newer local entry" : logIdx + " newer local entries"
+      debug.log("📓 DNSLink is outdated (" + idxLog + "), using local CID:", cid.toString())
+
+    } else {
+      // DNS is newer
+      cid = dataPointer
+      await cidLog.add(cid.toString())
+      debug.log("📓 DNSLink is newer:", cid.toString())
+
+    }
+
+    if (!cid) {
       // New FS
       const rootKey = await crypto.aes.genKeyStr()
 
@@ -118,7 +157,7 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
 
     } else {
       // Existing FS
-      const publicCid = decodeCID((await getSimpleLinks(dataPointer)).public.cid)
+      const publicCid = decodeCID((await getSimpleLinks(cid)).public.cid)
       const publicTree = await PublicTree.fromCID(publicCid)
       const unwrappedPath = path.unwrap(READ_KEY_PATH)
       const publicPath = unwrappedPath.slice(1)
@@ -140,13 +179,14 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
       const rootKey = await readKey.decrypt(encryptedRootKey as Uint8Array)
 
       await storeFileSystemRootKey(rootKey)
+      await checkFileSystemVersion(cid)
 
-      fs = await loadFileSystem(ROOT_PERMISSIONS, username, rootKey)
+      fs = await FileSystem.fromCID(cid, { permissions: ROOT_PERMISSIONS })
 
     }
   }
 
-  return appState.scenarioAuthed(username, fs)
+  return appState.scenarioAuthed(username, fs || undefined)
 }
 
 
