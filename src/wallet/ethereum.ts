@@ -87,7 +87,7 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
 
   // Generate ephemeral keypair
   const ephemeralKeyPair = nacl.box.keyPair()
-  const nonce = nacl.randomBytes(nacl.BoxLength.Nonce)
+  const nonce = nacl.randomBytes(nacl.box.nonceLength)
 
   // Encrypt
   const encryptedMessage = nacl.box(
