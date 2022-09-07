@@ -14,19 +14,19 @@ import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/in
 import { decodeCID } from "webnative/common/cid.js"
 import { leave } from "webnative/auth.js"
 import { isUsernameAvailable, storeFileSystemRootKey } from "webnative/lobby/index.js"
-import { setImplementations } from "webnative/setup"
+import { setImplementations } from "webnative/setup.js"
 
 import { getSimpleLinks } from "webnative/fs/protocol/basic.js"
 import { PublicFile } from "webnative/fs/v1/PublicFile.js"
 import { PublicTree } from "webnative/fs/v1/PublicTree.js"
 import FileSystem from "webnative/fs/filesystem.js"
 
-import * as readKey from "./read-key.ts"
-import * as walletUcan from "./ucan.ts"
-import * as wallet from "./wallet.ts"
+import * as readKey from "./read-key"
+import * as walletUcan from "./ucan"
+import * as wallet from "./wallet"
 
-import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation.ts"
-import { hasProp } from "./common.ts"
+import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation"
+import { hasProp } from "./common"
 
 
 
@@ -42,7 +42,7 @@ export const READ_KEY_PATH = path.file(path.Branch.Public, ".well-known", "read-
 
 
 
-export async function app(options?: { resetWnfs?: boolean, useWnfs?: boolean }): Promise<AppState> {
+export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }): Promise<AppState> {
   let fs
 
   options = options || {}
@@ -137,7 +137,7 @@ export async function app(options?: { resetWnfs?: boolean, useWnfs?: boolean }):
 
       const rootKey = await readKey.decrypt(encryptedRootKey as Uint8Array)
 
-      storeFileSystemRootKey(rootKey)
+      await storeFileSystemRootKey(rootKey)
 
       fs = await loadFileSystem(ROOT_PERMISSIONS, username, rootKey)
 

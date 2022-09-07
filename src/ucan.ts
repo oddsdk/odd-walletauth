@@ -3,7 +3,7 @@ import * as uint8arrays from "uint8arrays"
 import { encodeHeader, encodePayload } from "webnative/ucan/index.js"
 import { Resource, Ucan } from "webnative/ucan/types.js"
 
-import * as wallet from "./wallet.ts"
+import * as wallet from "./wallet"
 
 
 /**

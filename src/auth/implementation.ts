@@ -9,8 +9,8 @@ import * as useWnfs from "webnative/auth/implementation/use-wnfs.js"
 import { USERNAME_STORAGE_KEY } from "webnative/common/index.js"
 import { setup } from "webnative/setup/internal.js"
 
-import * as walletUcan from "../ucan.ts"
-import * as wallet from "../wallet.ts"
+import * as walletUcan from "../ucan"
+import * as wallet from "../wallet"
 
 
 // 🛠

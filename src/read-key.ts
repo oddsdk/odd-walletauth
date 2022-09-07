@@ -1,5 +1,5 @@
 import * as uint8arrays from "uint8arrays"
-import * as wallet from "./wallet.ts"
+import * as wallet from "./wallet"
 
 
 export async function decrypt(encrypted: Uint8Array): Promise<string> {

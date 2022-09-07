@@ -1,8 +1,0 @@
-{
-  "importMap": "import-map.json",
-  "tasks": {
-    "build": "deno task build:bundle && deno task build:npm",
-    "build:bundle": "rm -rf ./dist && mkdir dist && deno bundle src/index.ts dist/bundle.es6.js",
-    "build:npm": "deno run --allow-all scripts/build-npm.ts"
-  }
-}
