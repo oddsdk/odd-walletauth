@@ -86,7 +86,7 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
   const encryptionPublicKey = await publicEncryptionKey()
 
   // Generate ephemeral keypair
-  const ephemeralKeyPair = nacl.box_keyPair()
+  const ephemeralKeyPair = nacl.box.keyPair()
   const nonce = nacl.randomBytes(nacl.BoxLength.Nonce)
 
   // Encrypt
@@ -136,7 +136,7 @@ export function username(): Promise<string> {
 
 export async function verifySignedMessage(
   { signature, message, publicKey }:
-    { signature: Uint8Array, message: Uint8Array, publicKey?: Uint8Array }
+    { signature: Uint8Array; message: Uint8Array; publicKey?: Uint8Array }
 ): Promise<boolean> {
   return secp.verify(
     deconstructSignature(signature).full,
@@ -156,7 +156,7 @@ export async function address(): Promise<string> {
   const ethereum = await load()
 
   await ethereum
-    .request({ method: "eth_accounts", params: [] })
+    .request({ method: "eth_requestAccounts" })
     .then(getResult)
     .then(handleAccountsChanged)
     .catch((err: ProviderRpcError) => {
