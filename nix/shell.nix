@@ -3,25 +3,15 @@
   # Dependencies
   # ------------
 
-  deps = {
-
-    tools = [
-      just
-    ];
-
-    languages = [
-      nodejs-18_x
-    ];
-
-  };
+  deno = pkgs.callPackage ./deno-1.25.nix {};
 
 in
 
 mkShell {
 
-  buildInputs = builtins.concatLists [
-    deps.tools
-    deps.languages
+  buildInputs = [
+    nodejs-18_x
+    esbuild
   ];
 
 }

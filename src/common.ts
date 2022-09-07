@@ -1,11 +1,11 @@
-import * as guards from "@sniptt/guards"
+export function hasProp<K extends PropertyKey>(data: unknown, prop: K): data is Record<K, unknown> {
+  return typeof data === "object" && data != null && prop in data
+}
 
-import * as uint8arrays from "uint8arrays"
-
-
-// 🛠
-
+export function isString(a: unknown): a is string {
+  return typeof a === "string"
+}
 
 export function isStringArray(a: unknown): a is string[] {
-  return guards.isArray(a) && a.every(guards.isString)
+  return Array.isArray(a) && a.every(isString)
 }
