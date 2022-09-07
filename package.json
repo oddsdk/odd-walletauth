@@ -1,11 +1,37 @@
 {
   "name": "webnative-walletauth",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Use the [Webnative SDK](https://github.com/fission-codes/webnative#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
-  "main": "./dist/index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js"
+    "build": "npm run build:lib && npm run build:bundle",
+    "build:lib": "rimraf lib && tsc",
+    "build:bundle": "rimraf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js"
   },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./lib/*": "./lib/*",
+    "./*": "./lib/*",
+    "./package.json": "./package.json"
+  },
+  "types": "lib/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "lib/index.d.ts": [
+        "lib/index.d.ts"
+      ],
+      "*": [
+        "lib/*"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "lib",
+    "LICENSE",
+    "package.json",
+    "README.md"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/fission-codes/webnative-walletauth.git"
@@ -37,6 +63,7 @@
     "esbuild": "^0.15.7",
     "eslint": "^8.7.0",
     "events": "^3.3.0",
+    "rimraf": "^3.0.2",
     "typescript": "^4.5.5"
   }
 }

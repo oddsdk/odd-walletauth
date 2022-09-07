@@ -10,7 +10,7 @@ in
 mkShell {
 
   buildInputs = [
-    deno
+    nodejs-18_x
     esbuild
   ];
 

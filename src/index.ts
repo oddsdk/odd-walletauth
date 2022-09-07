@@ -8,7 +8,7 @@ import * as storage from "webnative/storage/index.js"
 import * as ucan from "webnative/ucan/index.js"
 import * as ucanInternal from "webnative/ucan/internal.js"
 
-import { AppState, InitialisationError, crypto, isSupported, loadFileSystem } from "webnative"
+import { AppState, InitialisationError, crypto, isSupported, loadFileSystem, setup } from "webnative"
 import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/index.js"
 
 import { decodeCID } from "webnative/common/cid.js"
@@ -81,6 +81,8 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
         lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
       }))
 
+      console.log(u)
+
       await ucanInternal.store([ u ])
     }
   }
@@ -146,3 +148,9 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
 
   return appState.scenarioAuthed(username, fs)
 }
+
+
+// 🙈
+
+
+export { setup }

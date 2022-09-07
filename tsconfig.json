@@ -15,8 +15,8 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "skipLibCheck": true,
-    // "declarationDir": "lib",
-    // "outDir": "lib"
+    "declarationDir": "lib",
+    "outDir": "lib"
   },
   "include": [
     "src/**/*"

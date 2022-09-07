@@ -1,4 +1,4 @@
 .direnv
-node_modules
 dist
-npm
+lib
+node_modules
