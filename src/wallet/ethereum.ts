@@ -89,9 +89,17 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
   const ephemeralKeyPair = nacl.box.keyPair()
   const nonce = nacl.randomBytes(nacl.box.nonceLength)
 
+  // Data padding
+  // const dataUtf8 = uint8arrays.toString(data, "base64pad")
+  // const dataLength = uint8arrays.fromString(JSON.stringify({ data: dataUtf8, padding: '' }), "utf8").length
+  // const modVal = dataLength % (2 ** 11)
+  // const padLength = modVal > 0 ? (2 ** 11) - modVal - 16 : 0
+  // const padding = '0'.repeat(padLength)
+  // const dataWithPadding = uint8arrays.fromString(JSON.stringify({ data: dataUtf8, padding }), "utf8")
+
   // Encrypt
   const encryptedMessage = nacl.box(
-    data,
+    uint8arrays.fromString(uint8arrays.toString(data, "base64pad"), "utf8"),
     nonce,
     encryptionPublicKey,
     ephemeralKeyPair.secretKey,
@@ -102,9 +110,9 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
   return uint8arrays.fromString(
     JSON.stringify({
       version: "x25519-xsalsa20-poly1305",
-      nonce: uint8arrays.toString(nonce, "base64"),
-      ephemPublicKey: uint8arrays.toString(ephemeralKeyPair.publicKey, "base64"),
-      ciphertext: uint8arrays.toString(encryptedMessage, "base64"),
+      nonce: uint8arrays.toString(nonce, "base64pad"),
+      ephemPublicKey: uint8arrays.toString(ephemeralKeyPair.publicKey, "base64pad"),
+      ciphertext: uint8arrays.toString(encryptedMessage, "base64pad"),
     }),
     "utf8"
   )
@@ -197,7 +205,7 @@ export async function publicEncryptionKey(): Promise<Uint8Array> {
     .catch((error: ProviderRpcError) => {
       if (error.code === 4001) {
         // EIP-1193 userRejectedRequest error
-        console.log("We can't encrypt anything without the key.")
+        console.error("We can't encrypt anything without the key.")
       } else {
         console.error(error)
       }
