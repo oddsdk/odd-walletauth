@@ -10,16 +10,24 @@ import { AppScenario } from "webnative"
 
 // Initialise
 
-const appState = await walletauth.app()
+const initialAppState = await walletauth.app({
+  // optional event handlers
+  onAccountChange: (newAppState) => handleAppState(newAppState),
+  onDisconnect: () => { /* eg. logout() */ }
+})
 
-switch (appState.scenario) {
-  case AppScenario.Authed:
-    // ✅ Authenticated
-    break;
+handleAppState(initialAppState)
 
-  case AppScenario.NotAuthed:
-    // Failed to authenticate with wallet
-    break;
+function handleAppState(appState) {
+  switch (appState.scenario) {
+    case AppScenario.Authed:
+      // ✅ Authenticated
+      break;
+
+    case AppScenario.NotAuthed:
+      // Failed to authenticate with wallet
+      break;
+  }
 }
 ```
 
@@ -31,7 +39,7 @@ import * as ethereum from "webnative-walletauth/wallet/ethereum.ts"
 ethereum.setProvider(window.ethereum)
 ```
 
-**You can also write an implementation for other wallets.** Note that the DID method has to be supported by the [Fission server](https://github.com/fission-codes/fission), unless you're using something else with webnative. At the moment of writing, you can only use the `key` method for DIDs with the Fission servers. It supports ED25519, RSA and SECP256K1 keys.
+**You can also write an implementation for other wallets.** Note that the DID method has to be supported by the [Fission server](https://github.com/fission-codes/fission), unless you're using something else with webnative. At the moment of writing, you can only use the `key` method for DIDs with the Fission servers. It supports ED25519, RSA and SECP256K1 keys, same for the UCAN algorithms.
 
 ```ts
 import * as walletImpl from "webnative-walletauth/wallet/implementation.ts"
@@ -39,12 +47,14 @@ import { Implementation } from "webnative-walletauth/wallet/types.ts"
 
 
 const impl: Implementation = {
-  decrypt:              () => Promise.resolve(...),
-  did:                  () => Promise.resolve(...),
-  encrypt:              () => Promise.resolve(...),
-  sign:                 () => Promise.resolve(...),
-  username:             () => Promise.resolve(...),
-  verifySignedMessage:  () => Promise.resolve(...),
+  decrypt:              (encryptedMessage: Uint8Array) => Promise<Uint8Array>,
+  did:                  () => Promise<string>,
+  encrypt:              (data: Uint8Array) => Promise<Uint8Array>,
+  init:                 () => Promise<void>,
+  sign:                 (data: Uint8Array) => Promise<Uint8Array>,
+  ucanAlgorithm:        string,
+  username:             () => Promise<string>,
+  verifySignedMessage:  (args: { signature: Uint8Array; message: Uint8Array; publicKey?: Uint8Array }) => Promise<boolean>,
 }
 
 // NOTE: run this before you call `walletAuth.app()`

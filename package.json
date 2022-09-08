@@ -49,13 +49,15 @@
     "url": "https://github.com/fission-codes/webnative-walletauth/issues"
   },
   "homepage": "https://github.com/fission-codes/webnative-walletauth#readme",
+  "peerDependencies": {
+    "webnative": "^0.34.1"
+  },
   "dependencies": {
     "@noble/hashes": "^1.1.2",
     "@noble/secp256k1": "^1.6.3",
     "eip1193-provider": "^1.0.1",
     "tweetnacl": "^1.0.3",
-    "uint8arrays": "^3.1.0",
-    "webnative": "^0.34.1"
+    "uint8arrays": "^3.1.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.10.0",
