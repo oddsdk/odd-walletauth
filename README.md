@@ -39,12 +39,13 @@ import { Implementation } from "webnative-walletauth/wallet/types.ts"
 
 
 const impl: Implementation = {
-  decrypt:              () => Promise.resolve(...),
-  did:                  () => Promise.resolve(...),
-  encrypt:              () => Promise.resolve(...),
-  sign:                 () => Promise.resolve(...),
-  username:             () => Promise.resolve(...),
-  verifySignedMessage:  () => Promise.resolve(...),
+  decrypt:              (encryptedMessage: Uint8Array) => Promise<Uint8Array>,
+  did:                  () => Promise<string>,
+  encrypt:              (data: Uint8Array) => Promise<Uint8Array>,
+  sign:                 (data: Uint8Array) => Promise<Uint8Array>,
+  ucanAlgorithm:        string,
+  username:             () => Promise<string>,
+  verifySignedMessage:  (args: { signature: Uint8Array; message: Uint8Array; publicKey?: Uint8Array }) => Promise<boolean>,
 }
 
 // NOTE: run this before you call `walletAuth.app()`

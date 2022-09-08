@@ -365,6 +365,7 @@ export const implementation: Implementation = {
   encrypt,
   did,
   sign,
+  ucanAlgorithm: "ES256K",
   username,
   verifySignedMessage,
 }

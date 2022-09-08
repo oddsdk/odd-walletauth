@@ -29,7 +29,7 @@ export async function build({
   const currentTimeInSeconds = Math.floor(Date.now() / 1000)
 
   const header = {
-    alg: "ES256K",
+    alg: wallet.ucanAlgorithm(),
     typ: "JWT",
     uav: "1.0.0"
   }
