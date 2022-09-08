@@ -61,8 +61,11 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
   const username = await wallet.username()
   const isNewUser = await isUsernameAvailable(username) === true
 
-  if (resetWnfs || isNewUser) await leave({ withoutRedirect: true })
-  const authedUsername = await authenticatedUsername()
+  let authedUsername = await authenticatedUsername()
+  if (resetWnfs || isNewUser || username !== authedUsername) {
+    await leave({ withoutRedirect: true })
+    authedUsername = null
+  }
 
   // Ensure UCAN store
   await ucanInternal.store([])
