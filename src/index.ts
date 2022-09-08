@@ -40,11 +40,22 @@ export const READ_KEY_PATH = path.file(path.Branch.Public, ".well-known", "read-
 
 
 
+// 🌳
+
+
+export type AppOptions = {
+  onAccountChange?: (appState: AppState) => unknown;
+  onDisconnect?: Function;
+  resetWnfs?: boolean;
+  useWnfs?: boolean;
+}
+
+
+
 // 🚀
 
 
-
-export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }): Promise<AppState> {
+export async function app(options?: AppOptions): Promise<AppState> {
   let fs
 
   options = options || {}
@@ -56,6 +67,16 @@ export async function app(options?: { resetWnfs?: boolean; useWnfs?: boolean }):
   // Check if browser is supported
   if (hasProp(self, "isSecureContext") && self.isSecureContext === false) throw InitialisationError.InsecureContext
   if (await isSupported() === false) throw InitialisationError.UnsupportedBrowser
+
+  // Initialise wallet
+  await wallet.init({
+    onAccountChange: () => leave({ withoutRedirect: true })
+      .then(() => app(options))
+      .then(a => options?.onAccountChange ? options.onAccountChange(a) : a),
+
+    onDisconnect: () => leave({ withoutRedirect: true })
+      .then(a => options?.onDisconnect ? options.onDisconnect(a) : a),
+  })
 
   // Authenticate & create user if necessary
   const username = await wallet.username()

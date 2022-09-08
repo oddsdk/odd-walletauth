@@ -1,5 +1,5 @@
 import type { ProviderRpcError } from "eip1193-provider"
-import type { Implementation } from "./types"
+import type { Implementation, InitArgs } from "./types"
 
 import * as nacl from "tweetnacl"
 import * as secp from "@noble/secp256k1"
@@ -33,6 +33,7 @@ export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 // 🌸
 
 
+let didBindEvents: boolean = false
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
@@ -45,6 +46,7 @@ let provider: Provider | null = hasProp(self, "ethereum") ? self.ethereum as Pro
 
 export function setProvider(p: Provider): void {
   provider = p
+  didBindEvents = false
 }
 
 
@@ -119,10 +121,29 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
 }
 
 
-export async function sign(data: Uint8Array): Promise<Uint8Array> {
+export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise<void> {
+  if (didBindEvents) return
+
   const ethereum = await load()
 
-  return ethereum.request({
+  ethereum.on("accountsChanged", async (accounts: string[]) => {
+    handleAccountsChanged(accounts)
+    await onAccountChange()
+  })
+
+  ethereum.on("disconnect", async () => {
+    globCurrentAccount = null
+    await onDisconnect()
+  })
+
+  didBindEvents = true
+}
+
+
+export async function sign(data: Uint8Array): Promise<Uint8Array> {
+  const provider = await load()
+
+  return provider.request({
     method: "personal_sign", params: [
       uint8ArrayToEthereumHex(data),
       await address(),
@@ -184,11 +205,6 @@ export async function address(): Promise<string> {
 
 export function load(): Promise<Provider> {
   if (!provider) throw new Error("Provider was not set yet")
-
-  // events
-  provider.on("accountsChanged", handleAccountsChanged)
-
-  // fin
   return Promise.resolve(provider)
 }
 
@@ -364,6 +380,7 @@ export const implementation: Implementation = {
   decrypt,
   encrypt,
   did,
+  init,
   sign,
   ucanAlgorithm: "ES256K",
   username,
