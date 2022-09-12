@@ -5,7 +5,8 @@
   "scripts": {
     "build": "npm run build:lib && npm run build:bundle",
     "build:lib": "rimraf lib && tsc",
-    "build:bundle": "rimraf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/index.js"
+    "build:bundle": "rimraf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/webnative-walletauth.js --sourcemap",
+    "prepare": "npm run build"
   },
   "main": "./lib/index.js",
   "exports": {
