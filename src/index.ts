@@ -44,10 +44,10 @@ export const READ_KEY_PATH = path.file(path.Branch.Public, ".well-known", "read-
 
 
 export type AppOptions = {
-  onAccountChange?: (appState: AppState) => unknown;
-  onDisconnect?: Function;
-  resetWnfs?: boolean;
-  useWnfs?: boolean;
+  onAccountChange?: (appState: AppState) => unknown
+  onDisconnect?: (...args: unknown[]) => unknown
+  resetWnfs?: boolean
+  useWnfs?: boolean
 }
 
 

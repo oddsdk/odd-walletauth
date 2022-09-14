@@ -33,7 +33,7 @@ export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 // 🌸
 
 
-let didBindEvents: boolean = false
+let didBindEvents = false
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
