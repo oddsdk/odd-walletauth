@@ -37,6 +37,7 @@ let didBindEvents = false
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
+const globSignature: { [key: string]: Uint8Array } = {}
 let provider: Provider | null = hasProp(self, "ethereum") ? self.ethereum as Provider : null
 
 
@@ -126,24 +127,50 @@ export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise
 
   const ethereum = await load()
 
+  // accountsChanged is called when the account connected to the app changes - this includes when
+  // an additional account is connected, as well as when the connected account is disconnected,
+  // which will return an empty accounts array
   ethereum.on("accountsChanged", async (accounts: string[]) => {
-    handleAccountsChanged(accounts)
-    await onAccountChange()
+    if (accounts.length) {
+      // MetaMask can sometimes trigger accountsChanged when first connecting to an account, so we
+      // need to ensure it is actually being triggered by a new account change to extra signatures
+      if (globCurrentAccount !== accounts[0]) {
+        handleAccountsChanged(accounts)
+        await onAccountChange()
+      }
+    } else {
+      // disconnected
+      await disconnect({ onDisconnect })
+    }
   })
 
+  // The MetaMask provider emits this event if it becomes unable to submit RPC requests to any chain.
+  // In general, this will only happen due to network connectivity issues or some unforeseen error.
   ethereum.on("disconnect", async () => {
-    globCurrentAccount = null
-    await onDisconnect()
+    await disconnect({ onDisconnect })
   })
 
   didBindEvents = true
 }
 
 
+async function disconnect({
+  onDisconnect,
+}: {
+  onDisconnect: () => Promise<unknown>
+}): Promise<void> {
+  globCurrentAccount = null
+  await onDisconnect()
+}
+
+
 export async function sign(data: Uint8Array): Promise<Uint8Array> {
+  const key = `${globCurrentAccount}-${data.toString()}`
+  if (globSignature[key]) return globSignature[key]
+
   const provider = await load()
 
-  return provider.request({
+  const signature = await provider.request({
     method: "personal_sign", params: [
       uint8ArrayToEthereumHex(data),
       await address(),
@@ -155,6 +182,10 @@ export async function sign(data: Uint8Array): Promise<Uint8Array> {
       else throw new Error("Expected the result of `sign` to be a hexadecimal string")
     })
     .then(uint8ArrayFromEthereumHex)
+
+  globSignature[key] = signature
+
+  return signature
 }
 
 
@@ -352,7 +383,7 @@ export async function verifyPublicKey(): Promise<boolean> {
   return verifySignedMessage({
     signature: await sign(MSG_TO_SIGN),
     message: MSG_TO_SIGN,
-    publicKey: await publicSignatureKey()
+    publicKey: await publicSignatureKey(),
   })
 }
 
