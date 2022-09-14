@@ -132,8 +132,8 @@ export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise
   // which will return an empty accounts array
   ethereum.on("accountsChanged", async (accounts: string[]) => {
     if (accounts.length) {
-      // MetaMask can sometimes trigger accountsChanged when first connecting to an account, so we
-      // need to ensure it is actually being triggered by a new account change to extra signatures
+      // MetaMask can sometimes trigger accountsChanged when first connecting to an account, so we need to
+      // ensure it is actually being triggered by a new account change to avoid extra signatures
       if (globCurrentAccount !== accounts[0]) {
         handleAccountsChanged(accounts)
         await onAccountChange()
