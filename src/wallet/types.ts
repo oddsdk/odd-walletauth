@@ -11,13 +11,13 @@ export type Implementation = {
 
 
 export type InitArgs = {
-  onAccountChange: () => Promise<unknown>;
-  onDisconnect: () => Promise<unknown>;
+  onAccountChange: () => Promise<unknown>
+  onDisconnect: () => Promise<unknown>
 }
 
 
 export type VerifyArgs = {
-  signature: Uint8Array;
-  message: Uint8Array;
-  publicKey?: Uint8Array;
+  signature: Uint8Array
+  message: Uint8Array
+  publicKey?: Uint8Array
 }

@@ -33,7 +33,7 @@ export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 // 🌸
 
 
-let didBindEvents: boolean = false
+let didBindEvents = false
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
@@ -126,14 +126,27 @@ export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise
 
   const ethereum = await load()
 
+  // accountsChanged is called when the account connected to the app changes - this includes when
+  // an additional account is connected, as well as when the connected account is disconnected,
+  // which will return an empty accounts array
   ethereum.on("accountsChanged", async (accounts: string[]) => {
-    handleAccountsChanged(accounts)
-    await onAccountChange()
+    if (accounts.length) {
+      // MetaMask can sometimes trigger accountsChanged when first connecting to an account, so we need to
+      // ensure it is actually being triggered by a new account change to avoid extra signatures
+      if (globCurrentAccount !== accounts[0]) {
+        handleAccountsChanged(accounts)
+        await onAccountChange()
+      }
+    } else {
+      // disconnected
+      await disconnect({ onDisconnect })
+    }
   })
 
+  // The MetaMask provider emits this event if it becomes unable to submit RPC requests to any chain.
+  // In general, this will only happen due to network connectivity issues or some unforeseen error.
   ethereum.on("disconnect", async () => {
-    globCurrentAccount = null
-    await onDisconnect()
+    await disconnect({ onDisconnect })
   })
 
   didBindEvents = true
@@ -252,6 +265,16 @@ export async function publicSignatureKey(): Promise<Uint8Array> {
 }
 
 
+async function disconnect({
+  onDisconnect,
+}: {
+  onDisconnect: () => Promise<unknown>
+}): Promise<void> {
+  globCurrentAccount = null
+  await onDisconnect()
+}
+
+
 
 // 🛠
 
@@ -352,7 +375,7 @@ export async function verifyPublicKey(): Promise<boolean> {
   return verifySignedMessage({
     signature: await sign(MSG_TO_SIGN),
     message: MSG_TO_SIGN,
-    publicKey: await publicSignatureKey()
+    publicKey: await publicSignatureKey(),
   })
 }
 

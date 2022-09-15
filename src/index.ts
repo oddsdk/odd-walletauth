@@ -44,10 +44,10 @@ export const READ_KEY_PATH = path.file(path.Branch.Public, ".well-known", "read-
 
 
 export type AppOptions = {
-  onAccountChange?: (appState: AppState) => unknown;
-  onDisconnect?: Function;
-  resetWnfs?: boolean;
-  useWnfs?: boolean;
+  onAccountChange?: (appState: AppState) => unknown
+  onDisconnect?: (...args: unknown[]) => unknown
+  resetWnfs?: boolean
+  useWnfs?: boolean
 }
 
 
@@ -68,16 +68,6 @@ export async function app(options?: AppOptions): Promise<AppState> {
   if (hasProp(self, "isSecureContext") && self.isSecureContext === false) throw InitialisationError.InsecureContext
   if (await isSupported() === false) throw InitialisationError.UnsupportedBrowser
 
-  // Initialise wallet
-  await wallet.init({
-    onAccountChange: () => leave({ withoutRedirect: true })
-      .then(() => app(options))
-      .then(a => options?.onAccountChange ? options.onAccountChange(a) : a),
-
-    onDisconnect: () => leave({ withoutRedirect: true })
-      .then(a => options?.onDisconnect ? options.onDisconnect(a) : a),
-  })
-
   // Authenticate & create user if necessary
   const username = await wallet.username()
   const isNewUser = await isUsernameAvailable(username) === true
@@ -87,6 +77,16 @@ export async function app(options?: AppOptions): Promise<AppState> {
     await leave({ withoutRedirect: true })
     authedUsername = null
   }
+
+  // Initialise wallet
+  await wallet.init({
+    onAccountChange: () => leave({ withoutRedirect: true })
+      .then(() => app(options))
+      .then(a => options?.onAccountChange ? options.onAccountChange(a) : a),
+
+    onDisconnect: () => leave({ withoutRedirect: true })
+      .then(a => options?.onDisconnect ? options.onDisconnect(a) : a),
+  })
 
   // Ensure UCAN store
   await ucanInternal.store([])
