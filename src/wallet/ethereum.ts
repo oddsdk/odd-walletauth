@@ -154,16 +154,6 @@ export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise
 }
 
 
-async function disconnect({
-  onDisconnect,
-}: {
-  onDisconnect: () => Promise<unknown>
-}): Promise<void> {
-  globCurrentAccount = null
-  await onDisconnect()
-}
-
-
 export async function sign(data: Uint8Array): Promise<Uint8Array> {
   const key = `${globCurrentAccount}-${data.toString()}`
   if (globSignature[key]) return globSignature[key]
@@ -280,6 +270,16 @@ export async function publicSignatureKey(): Promise<Uint8Array> {
   )
 
   return globPublicSignatureKey
+}
+
+
+async function disconnect({
+  onDisconnect,
+}: {
+  onDisconnect: () => Promise<unknown>
+}): Promise<void> {
+  globCurrentAccount = null
+  await onDisconnect()
 }
 
 
