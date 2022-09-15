@@ -37,7 +37,6 @@ let didBindEvents = false
 let globCurrentAccount: string | null = null
 let globPublicEncryptionKey: Uint8Array | null = null
 let globPublicSignatureKey: Uint8Array | null = null
-const globSignature: { [key: string]: Uint8Array } = {}
 let provider: Provider | null = hasProp(self, "ethereum") ? self.ethereum as Provider : null
 
 
@@ -155,12 +154,9 @@ export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise
 
 
 export async function sign(data: Uint8Array): Promise<Uint8Array> {
-  const key = `${globCurrentAccount}-${data.toString()}`
-  if (globSignature[key]) return globSignature[key]
-
   const provider = await load()
 
-  const signature = await provider.request({
+  return provider.request({
     method: "personal_sign", params: [
       uint8ArrayToEthereumHex(data),
       await address(),
@@ -172,10 +168,6 @@ export async function sign(data: Uint8Array): Promise<Uint8Array> {
       else throw new Error("Expected the result of `sign` to be a hexadecimal string")
     })
     .then(uint8ArrayFromEthereumHex)
-
-  globSignature[key] = signature
-
-  return signature
 }
 
 
