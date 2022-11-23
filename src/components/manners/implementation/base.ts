@@ -45,8 +45,7 @@ export async function implementation(
       hooks: {
         ...base.fileSystem.hooks,
 
-        afterLoadExisting: async (fs: FileSystem.API) => { },
-        afterLoadNew: async (fs: FileSystem.API) => {
+        afterLoadNew: async (fs: FileSystem.API, ...args) => {
           const readKey = await RootKey.retrieve({
             crypto: dependents.crypto,
             accountDID: fs.account.rootDID,
@@ -56,8 +55,12 @@ export async function implementation(
             READ_KEY_PATH,
             await wallet.encrypt(readKey)
           )
+
+          return base.fileSystem.hooks.afterLoadNew(fs, ...args)
         },
-        beforeLoadExisting: async (dataRoot: CID, dataFlowComponents: Manners.DataFlowComponents) => {
+        beforeLoadExisting: async (dataRoot: CID, account: FileSystem.AssociatedIdentity, dataFlowComponents: Manners.DataFlowComponents) => {
+          if (await RootKey.exists({ crypto: dependents.crypto, accountDID: account.rootDID }) === true) return
+
           const { depot, reference } = dataFlowComponents
           const publicCid = decodeCID((await FileSystemProtocol.getSimpleLinks(depot, dataRoot)).public.cid)
           const publicTree = await PublicTree.fromCID(depot, reference, publicCid)
@@ -78,11 +81,10 @@ export async function implementation(
 
           RootKey.store({
             crypto: dependents.crypto,
-            accountDID: await WalletFunctions.did(dependents.crypto, wallet),
+            accountDID: account.rootDID,
             readKey: rootKey
           })
         },
-        beforeLoadNew: async () => { },
       }
     }
   }
