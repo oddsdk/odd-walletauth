@@ -11,6 +11,8 @@ import * as BaseManners from "./components/manners/implementation/base.js"
 import * as EthereumWallet from "./wallet/implementation/ethereum.js"
 import * as Wallet from "./wallet/implementation.js"
 
+import { did } from "./wallet/common.js"
+
 
 
 // 🛳
@@ -57,15 +59,16 @@ export type Options = {
  */
 export async function program(settings: Options & Partial<Components> & Configuration): Promise<Program> {
   const wallet = settings.wallet || EthereumWallet.implementation
+  const walletCrypto = await components.crypto({ ...settings, wallet })
 
-  const crypto = await components.crypto({ ...settings, wallet })
-  const manners = await components.manners({ ...settings, crypto, wallet })
+  const defaultCrypto = await Webnative.defaultCryptoComponent(settings.namespace)
+  const manners = await components.manners({ ...settings, wallet, crypto: defaultCrypto })
 
   // Create Webnative Program
   const webnativeProgram = await Webnative.program({
     ...settings,
 
-    crypto,
+    crypto: defaultCrypto,
     manners,
   })
 
@@ -105,6 +108,23 @@ export async function program(settings: Options & Partial<Components> & Configur
       )
     }
 
+    // Create an account UCAN
+    const accountUcan = await Webnative.ucan.build({
+      dependents: { crypto: walletCrypto },
+      potency: "APPEND",
+      resource: "*",
+      lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
+
+      audience: await Webnative.did.ucan(defaultCrypto),
+      issuer: await did(walletCrypto, wallet),
+    })
+
+    webnativeProgram.components.storage.setItem(
+      webnativeProgram.components.storage.KEYS.ACCOUNT_UCAN,
+      Webnative.ucan.encode(accountUcan)
+    )
+
+    // Create session
     session = await authStrategy.session()
     webnativeProgram.session = session
   }

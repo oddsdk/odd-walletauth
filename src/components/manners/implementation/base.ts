@@ -12,7 +12,6 @@ import { PublicTree } from "webnative/fs/v1/PublicTree.js"
 import { CID, decodeCID } from "webnative/common/cid.js"
 
 import * as Wallet from "../../../wallet/implementation.js"
-import * as WalletFunctions from "../../../wallet/common.js"
 
 
 // 🏔
