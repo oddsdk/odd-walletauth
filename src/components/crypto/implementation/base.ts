@@ -34,12 +34,12 @@ export async function implementation(
     keystore: {
       clearStore: browserCrypto.keystore.clearStore,
       exportSymmKey: browserCrypto.keystore.exportSymmKey,
-      getAlgorithm: browserCrypto.keystore.getAlgorithm,
       importSymmKey: browserCrypto.keystore.importSymmKey,
       keyExists: browserCrypto.keystore.keyExists,
       publicExchangeKey: browserCrypto.keystore.publicExchangeKey,
 
       decrypt: wallet.decrypt,
+      getAlgorithm: async () => pubKey.type,
       getUcanAlgorithm: async () => wallet.ucanAlgorithm,
       publicWriteKey: () => wallet.publicSignatureKey().then(a => a.key),
       sign: wallet.sign
