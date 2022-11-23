@@ -48,7 +48,7 @@ export type Options = {
   onAccountChange?: (program: Program) => unknown
   onDisconnect?: () => unknown
 
-  wallet: Wallet.Implementation
+  wallet?: Wallet.Implementation
 }
 
 
@@ -59,7 +59,7 @@ export async function program(settings: Options & Partial<Components> & Configur
   const wallet = settings.wallet || EthereumWallet.implementation
 
   const crypto = await components.crypto({ ...settings, wallet })
-  const manners = await components.manners({ ...settings, crypto })
+  const manners = await components.manners({ ...settings, crypto, wallet })
 
   // Create Webnative Program
   const webnativeProgram = await Webnative.program({
