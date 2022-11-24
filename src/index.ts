@@ -34,7 +34,6 @@ export const components = {
     wallet: Wallet.Implementation
   }): Promise<Manners.Implementation> {
     return BaseManners.implementation(
-      settings,
       settings.wallet,
       { configuration: settings }
     )
@@ -110,7 +109,7 @@ export async function program(settings: Options & Partial<Components> & Configur
 
     // Create an account UCAN
     const accountUcan = await Webnative.ucan.build({
-      dependents: { crypto: walletCrypto },
+      dependencies: { crypto: walletCrypto },
       potency: "APPEND",
       resource: "*",
       lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years

@@ -51,7 +51,7 @@
   },
   "homepage": "https://github.com/fission-codes/webnative-walletauth#readme",
   "peerDependencies": {
-    "webnative": "fission-codes/webnative#icidasset/fs-hooks"
+    "webnative": "fission-codes/webnative#icidasset/state-refactor"
   },
   "dependencies": {
     "@noble/hashes": "^1.1.2",

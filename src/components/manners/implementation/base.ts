@@ -1,4 +1,3 @@
-import * as Crypto from "webnative/components/crypto/implementation.js"
 import * as Manners from "webnative/components/manners/implementation.js"
 
 import * as FileSystem from "webnative/fs/types.js"
@@ -20,17 +19,11 @@ import * as Wallet from "../../../wallet/implementation.js"
 export const READ_KEY_PATH = Path.file(Path.Branch.Public, ".well-known", "read-key")
 
 
-export type Dependents = {
-  crypto: Crypto.Implementation
-}
-
-
 
 // 🛳
 
 
 export async function implementation(
-  dependents: Dependents,
   wallet: Wallet.Implementation,
   opts: Manners.ImplementationOptions
 ): Promise<Manners.Implementation> {
@@ -44,10 +37,10 @@ export async function implementation(
       hooks: {
         ...base.fileSystem.hooks,
 
-        afterLoadNew: async (fs: FileSystem.API, ...args) => {
+        afterLoadNew: async (fs: FileSystem.API, account: FileSystem.AssociatedIdentity, dataComponents: Manners.DataComponents) => {
           const readKey = await RootKey.retrieve({
-            crypto: dependents.crypto,
-            accountDID: fs.account.rootDID,
+            crypto: dataComponents.crypto,
+            accountDID: account.rootDID,
           })
 
           await fs.write(
@@ -55,12 +48,13 @@ export async function implementation(
             await wallet.encrypt(readKey)
           )
 
-          return base.fileSystem.hooks.afterLoadNew(fs, ...args)
+          return base.fileSystem.hooks.afterLoadNew(fs, account, dataComponents)
         },
-        beforeLoadExisting: async (dataRoot: CID, account: FileSystem.AssociatedIdentity, dataFlowComponents: Manners.DataFlowComponents) => {
-          if (await RootKey.exists({ crypto: dependents.crypto, accountDID: account.rootDID }) === true) return
+        beforeLoadExisting: async (dataRoot: CID, account: FileSystem.AssociatedIdentity, dataComponents: Manners.DataComponents) => {
+          const { crypto, depot, reference } = dataComponents
 
-          const { depot, reference } = dataFlowComponents
+          if (await RootKey.exists({ crypto: crypto, accountDID: account.rootDID }) === true) return
+
           const publicCid = decodeCID((await FileSystemProtocol.getSimpleLinks(depot, dataRoot)).public.cid)
           const publicTree = await PublicTree.fromCID(depot, reference, publicCid)
           const unwrappedPath = Path.unwrap(READ_KEY_PATH)
@@ -79,7 +73,7 @@ export async function implementation(
           const rootKey = await wallet.decrypt(encryptedRootKey)
 
           RootKey.store({
-            crypto: dependents.crypto,
+            crypto: crypto,
             accountDID: account.rootDID,
             readKey: rootKey
           })
