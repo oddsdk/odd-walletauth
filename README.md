@@ -30,7 +30,7 @@ function handleProgram(program) {
 Use a custom Ethereum provider:
 
 ```ts
-import * as ethereum from "webnative-walletauth/wallet/ethereum.js"
+import * as ethereum from "webnative-walletauth/wallet/ethereum"
 
 ethereum.setProvider(window.ethereum)
 ```
@@ -38,9 +38,7 @@ ethereum.setProvider(window.ethereum)
 **You can also write an implementation for other wallets.** Note that the DID method has to be supported by the [Fission server](https://github.com/fission-codes/fission), unless you're using something else with webnative. At the moment of writing, you can only use the `key` method for DIDs with the Fission servers. It supports ED25519, RSA and SECP256K1 keys, same for the UCAN algorithms.
 
 ```ts
-import * as walletImpl from "webnative-walletauth/wallet/implementation.js"
-import { Implementation } from "webnative-walletauth/wallet/types.js"
-
+import { Implementation } from "webnative-walletauth/wallet/implementation"
 
 const impl: Implementation = {
   decrypt:              (encryptedMessage: Uint8Array) => Promise<Uint8Array>,
