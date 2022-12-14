@@ -1,5 +1,5 @@
-import * as BrowserCrypto from "webnative/components/crypto/implementation/browser.js"
-import * as Crypto from "webnative/components/crypto/implementation.js"
+import * as BrowserCrypto from "webnative/components/crypto/implementation/browser"
+import * as Crypto from "webnative/components/crypto/implementation"
 
 import * as Wallet from "../../../wallet/implementation.js"
 

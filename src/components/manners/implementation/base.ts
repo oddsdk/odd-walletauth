@@ -1,14 +1,14 @@
-import * as Manners from "webnative/components/manners/implementation.js"
+import * as Manners from "webnative/components/manners/implementation"
 
-import * as FileSystem from "webnative/fs/types.js"
-import * as FileSystemProtocol from "webnative/fs/protocol/basic.js"
-import * as Path from "webnative/path/index.js"
-import * as RootKey from "webnative/common/root-key.js"
-import * as WebnativeManners from "webnative/components/manners/implementation/base.js"
+import * as FileSystem from "webnative/fs/types"
+import * as FileSystemProtocol from "webnative/fs/protocol/basic"
+import * as Path from "webnative/path/index"
+import * as RootKey from "webnative/common/root-key"
+import * as WebnativeManners from "webnative/components/manners/implementation/base"
 
-import { PublicFile } from "webnative/fs/v1/PublicFile.js"
-import { PublicTree } from "webnative/fs/v1/PublicTree.js"
-import { CID, decodeCID } from "webnative/common/cid.js"
+import { PublicFile } from "webnative/fs/v1/PublicFile"
+import { PublicTree } from "webnative/fs/v1/PublicTree"
+import { CID, decodeCID } from "webnative/common/cid"
 
 import * as Wallet from "../../../wallet/implementation.js"
 

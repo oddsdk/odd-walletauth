@@ -1,5 +1,5 @@
-import * as Crypto from "webnative/components/crypto/implementation.js"
-import { publicKeyToDid } from "webnative/did/index.js"
+import * as Crypto from "webnative/components/crypto/implementation"
+import { publicKeyToDid } from "webnative/did/index"
 
 import * as Wallet from "./implementation.js"
 

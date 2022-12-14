@@ -1,9 +1,9 @@
-import { Components, Configuration, namespaceToString, Program } from "webnative"
+import { Components, Configuration, namespace, Program } from "webnative"
 
-import * as Crypto from "webnative/components/crypto/implementation.js"
-import * as Manners from "webnative/components/manners/implementation.js"
+import * as Crypto from "webnative/components/crypto/implementation"
+import * as Manners from "webnative/components/manners/implementation"
 
-import * as Session from "webnative/session.js"
+import * as Session from "webnative/session"
 import * as Webnative from "webnative"
 
 import * as BaseCrypto from "./components/crypto/implementation/base.js"
@@ -23,7 +23,7 @@ export const components = {
     wallet: Wallet.Implementation
   }): Promise<Crypto.Implementation> {
     return BaseCrypto.implementation(settings.wallet, {
-      storeName: namespaceToString(settings.namespace),
+      storeName: namespace(settings),
       exchangeKeyName: "exchange-key",
       writeKeyName: "write-key"
     })
@@ -70,7 +70,7 @@ export async function program(settings: Options & Partial<Components> & Configur
   const wallet = settings.wallet || EthereumWallet.implementation
   const walletCrypto = await components.crypto({ ...settings, wallet })
 
-  const defaultCrypto = await Webnative.defaultCryptoComponent(settings.namespace)
+  const defaultCrypto = await Webnative.defaultCryptoComponent(settings)
   const manners = await components.manners({ ...settings, wallet, crypto: defaultCrypto })
 
   // Create Webnative Program
