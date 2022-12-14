@@ -54,7 +54,17 @@ export type Options = {
 
 
 /**
+ * 🚀 Build a webnative-walletauth program.
  *
+ * Contrary to a regular webnative program,
+ * this'll create an account for you automatically.
+ * It also does session management for you.
+ *
+ * You may pass in a custom `wallet` implementation
+ * if you'd like to use another wallet than the built-in
+ * Ethereum one.
+ *
+ * See webnative's `program` function documentation for more info.
  */
 export async function program(settings: Options & Partial<Components> & Configuration): Promise<Program> {
   const wallet = settings.wallet || EthereumWallet.implementation
