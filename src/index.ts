@@ -76,7 +76,6 @@ export async function program(settings: Options & Partial<Components> & Configur
   // Create Webnative Program
   const webnativeProgram = await Webnative.program({
     ...settings,
-
     crypto: defaultCrypto,
     manners,
   })
