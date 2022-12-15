@@ -1,53 +1,43 @@
-import * as auth from "webnative/auth/index.js"
-import * as dataRoot from "webnative/data-root.js"
-import * as debug from "webnative/common/debug.js"
-import * as did from "webnative/did/index.js"
-import * as appState from "webnative/auth/state/app.js"
-import * as cidLog from "webnative/common/cid-log.js"
-import * as path from "webnative/path.js"
-import * as setup from "webnative/setup.js"
-import * as storage from "webnative/storage/index.js"
-import * as ucan from "webnative/ucan/index.js"
-import * as ucanInternal from "webnative/ucan/internal.js"
+import { Components, Configuration, namespace, Program } from "webnative"
 
-import { AppState, InitialisationError, checkFileSystemVersion, crypto, isSupported, loadFileSystem } from "webnative"
-import { USERNAME_STORAGE_KEY, authenticatedUsername } from "webnative/common/index.js"
+import * as Crypto from "webnative/components/crypto/implementation"
+import * as Manners from "webnative/components/manners/implementation"
 
-import { decodeCID } from "webnative/common/cid.js"
-import { leave } from "webnative/auth.js"
-import { isUsernameAvailable, storeFileSystemRootKey } from "webnative/lobby/index.js"
-import { setImplementations } from "webnative/setup.js"
+import * as Session from "webnative/session"
+import * as Webnative from "webnative"
 
-import { getSimpleLinks } from "webnative/fs/protocol/basic.js"
-import { PublicFile } from "webnative/fs/v1/PublicFile.js"
-import { PublicTree } from "webnative/fs/v1/PublicTree.js"
-import FileSystem from "webnative/fs/filesystem.js"
+import * as BaseCrypto from "./components/crypto/implementation/base.js"
+import * as BaseManners from "./components/manners/implementation/base.js"
+import * as EthereumWallet from "./wallet/implementation/ethereum.js"
+import * as Wallet from "./wallet/implementation.js"
 
-import * as readKey from "./read-key"
-import * as walletUcan from "./ucan"
-import * as wallet from "./wallet"
-
-import { USE_WALLET_AUTH_IMPLEMENTATION } from "./auth/implementation"
-import { hasProp } from "./common"
+import { did } from "./wallet/common.js"
 
 
 
-// ⛰
+// 🛳
 
 
-export const ROOT_PERMISSIONS = { fs: { private: [ path.root() ], public: [ path.root() ] } }
-export const READ_KEY_PATH = path.file(path.Branch.Public, ".well-known", "read-key")
+export const components = {
+  crypto(settings: Configuration & {
+    wallet: Wallet.Implementation
+  }): Promise<Crypto.Implementation> {
+    return BaseCrypto.implementation(settings.wallet, {
+      storeName: namespace(settings),
+      exchangeKeyName: "exchange-key",
+      writeKeyName: "write-key"
+    })
+  },
 
-
-
-// 🌳
-
-
-export type AppOptions = {
-  onAccountChange?: (appState: AppState) => unknown
-  onDisconnect?: (...args: unknown[]) => unknown
-  resetWnfs?: boolean
-  useWnfs?: boolean
+  manners(settings: Configuration & {
+    crypto: Crypto.Implementation
+    wallet: Wallet.Implementation
+  }): Promise<Manners.Implementation> {
+    return BaseManners.implementation(
+      settings.wallet,
+      { configuration: settings }
+    )
+  }
 }
 
 
@@ -55,166 +45,130 @@ export type AppOptions = {
 // 🚀
 
 
-export async function app(options?: AppOptions): Promise<AppState> {
-  let fs
+export type Options = {
+  onAccountChange?: (program: Program) => unknown
+  onDisconnect?: () => unknown
 
-  options = options || {}
-
-  const { resetWnfs = false, useWnfs = true } = options
-
-  setImplementations(USE_WALLET_AUTH_IMPLEMENTATION)
-
-  // Check if browser is supported
-  if (hasProp(self, "isSecureContext") && self.isSecureContext === false) throw InitialisationError.InsecureContext
-  if (await isSupported() === false) throw InitialisationError.UnsupportedBrowser
-
-  // Authenticate & create user if necessary
-  const username = await wallet.username()
-  const isNewUser = await isUsernameAvailable(username) === true
-
-  let authedUsername = await authenticatedUsername()
-  if (resetWnfs || isNewUser || username !== authedUsername) {
-    await leave({ withoutRedirect: true })
-    authedUsername = null
-  }
-
-  // Initialise wallet
-  await wallet.init({
-    onAccountChange: () => leave({ withoutRedirect: true })
-      .then(() => app(options))
-      .then(a => options?.onAccountChange ? options.onAccountChange(a) : a),
-
-    onDisconnect: () => leave({ withoutRedirect: true })
-      .then(a => options?.onDisconnect ? options.onDisconnect(a) : a),
-  })
-
-  // Ensure UCAN store
-  await ucanInternal.store([])
-
-  // Make new account if necessary & delegate to new key-pair
-  if (!authedUsername) {
-    if (isNewUser) {
-      const { success } = await auth.register({ username })
-      if (!success) throw new Error("Failed to create Fission user")
-    }
-
-    // Authenticate
-    await storage.setItem(USERNAME_STORAGE_KEY, username)
-
-    // Self-authorize a filesystem UCAN if needed
-    if (useWnfs) {
-      const u = ucan.encode(await walletUcan.build({
-        issuer: await wallet.did(),
-        audience: await did.ucan(),
-        potency: "SUPER_USER",
-        lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
-      }))
-
-      await ucanInternal.store([ u ])
-    }
-  }
-
-  // Create or load WNFS
-  if (useWnfs) {
-    let cid
-
-    const isOnline = navigator.onLine
-    const dataPointer = isNewUser || resetWnfs || !isOnline ? null : await dataRoot.lookup(username)
-    const [ logIdx ] = dataPointer ? await cidLog.index(dataPointer.toString()) : [ -1, 0 ]
-
-    if (!isOnline) {
-      // Offline, use local CID
-      debug.log("📓 Offline, using last available file system")
-      cid = decodeCID(await cidLog.newest())
-
-    } else if (!dataPointer) {
-      // No DNS CID yet
-      cid = await cidLog.newest()
-      cid = cid ? decodeCID(cid) : null
-      if (cid) debug.log("📓 No DNSLink, using local CID:", cid.toString())
-      else debug.log("📓 Creating a new file system")
-
-    } else if (logIdx === 0) {
-      // DNS is up to date
-      cid = dataPointer
-      debug.log("📓 DNSLink is up to date:", cid.toString())
-
-    } else if (logIdx > 0) {
-      // DNS is outdated
-      cid = decodeCID(await cidLog.newest())
-      const idxLog = logIdx === 1 ? "1 newer local entry" : logIdx + " newer local entries"
-      debug.log("📓 DNSLink is outdated (" + idxLog + "), using local CID:", cid.toString())
-
-    } else {
-      // DNS is newer
-      cid = dataPointer
-      await cidLog.add(cid.toString())
-      debug.log("📓 DNSLink is newer:", cid.toString())
-
-    }
-
-    if (!cid) {
-      // New FS
-      const rootKey = await crypto.aes.genKeyStr()
-
-      fs = await FileSystem.empty({
-        permissions: ROOT_PERMISSIONS,
-        rootKey: rootKey,
-      })
-
-      await fs.write(
-        READ_KEY_PATH,
-        await readKey.encrypt(rootKey)
-      )
-
-      await fs.addPublicExchangeKey()
-      await fs.mkdir(path.directory("private", "Apps"))
-      await fs.mkdir(path.directory("private", "Audio"))
-      await fs.mkdir(path.directory("private", "Documents"))
-      await fs.mkdir(path.directory("private", "Photos"))
-      await fs.mkdir(path.directory("private", "Video"))
-
-      const rootCid = await fs.publish()
-
-      await cidLog.clear()
-      await cidLog.add(rootCid.toString())
-
-    } else {
-      // Existing FS
-      const publicCid = decodeCID((await getSimpleLinks(cid)).public.cid)
-      const publicTree = await PublicTree.fromCID(publicCid)
-      const unwrappedPath = path.unwrap(READ_KEY_PATH)
-      const publicPath = unwrappedPath.slice(1)
-      const readKeyChild = await publicTree.get(publicPath)
-
-      if (!readKeyChild) {
-        throw new Error(`Expected an encrypted read key at: ${path.log(publicPath)}`)
-      }
-
-      if (!PublicFile.instanceOf(readKeyChild)) {
-        throw new Error(`Did not expect a tree at: ${path.log(publicPath)}`)
-      }
-
-      const encryptedRootKey = readKeyChild.content
-      if (encryptedRootKey.constructor.name !== "Uint8Array") {
-        throw new Error("The read key was not a Uint8Array as we expected")
-      }
-
-      const rootKey = await readKey.decrypt(encryptedRootKey as Uint8Array)
-
-      await storeFileSystemRootKey(rootKey)
-      await checkFileSystemVersion(cid)
-
-      fs = await FileSystem.fromCID(cid, { permissions: ROOT_PERMISSIONS })
-
-    }
-  }
-
-  return appState.scenarioAuthed(username, fs || undefined)
+  wallet?: Wallet.Implementation
 }
 
 
-// 🙈
+/**
+ * 🚀 Build a webnative-walletauth program.
+ *
+ * Contrary to a regular webnative program,
+ * this'll create an account for you automatically.
+ * It also does session management for you.
+ *
+ * You may pass in a custom `wallet` implementation
+ * if you'd like to use another wallet than the built-in
+ * Ethereum one.
+ *
+ * See [webnative's `program`](https://webnative.fission.app/functions/program-1.html) function documentation for more info.
+ */
+export async function program(settings: Options & Partial<Components> & Configuration): Promise<Program> {
+  const wallet = settings.wallet || EthereumWallet.implementation
+  const walletCrypto = await components.crypto({ ...settings, wallet })
+
+  const defaultCrypto = await Webnative.defaultCryptoComponent(settings)
+  const manners = await components.manners({ ...settings, wallet, crypto: defaultCrypto })
+
+  // Create Webnative Program
+  const webnativeProgram = await Webnative.program({
+    ...settings,
+    crypto: defaultCrypto,
+    manners,
+  })
+
+  // Destroy existing session if wallet account changed
+  const authStrategy = webnativeProgram.auth
+  const username = await wallet.username()
+  const isNewUser = await authStrategy.isUsernameAvailable(username)
+
+  let session = webnativeProgram.session
+  if (session && (isNewUser || username !== session.username)) {
+    await session.destroy()
+    session = null
+  }
+
+  // Initialise wallet
+  // > Destroy existing session when account changes or disconnects.
+  // > Will create a new Program on account change.
+  await wallet.init({
+    onAccountChange: () => logErrorAndRethrow(async () => {
+      // Destroy the user's current session when the wallet account changes
+      const session = await authStrategy.session()
+      await session?.destroy()
+
+      // If the user has passed in a callback function, use it
+      const p = await program(settings)
+
+      if (settings?.onAccountChange instanceof Function) {
+        return settings.onAccountChange(p)
+      }
+
+      // Otherwise, return the program
+      return p
+    }),
+
+    onDisconnect: () => logErrorAndRethrow(async () => {
+      // Destroy the user's current session when the wallet account disconnects
+      const session = await authStrategy.session()
+      await session?.destroy()
+
+      // If the user has passed in a callback function, use it
+      if (settings?.onDisconnect instanceof Function) {
+        return settings.onDisconnect()
+      }
+    })
+  })
+
+  // Make a new account if necessary, otherwise provide a session.
+  // Afterwards, create a session.
+  if (!session) {
+    if (isNewUser) {
+      const { success } = await authStrategy.register({ username })
+      if (!success) throw new Error("Failed to register user")
+    } else {
+      await Session.provide(
+        webnativeProgram.components.storage,
+        { type: authStrategy.implementation.type, username }
+      )
+    }
+
+    // Create an account UCAN
+    const accountUcan = await Webnative.ucan.build({
+      dependencies: { crypto: walletCrypto },
+      potency: "APPEND",
+      resource: "*",
+      lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
+
+      audience: await Webnative.did.ucan(defaultCrypto),
+      issuer: await did(walletCrypto, wallet),
+    })
+
+    webnativeProgram.components.storage.setItem(
+      webnativeProgram.components.storage.KEYS.ACCOUNT_UCAN,
+      Webnative.ucan.encode(accountUcan)
+    )
+
+    // Create session
+    session = await authStrategy.session()
+    webnativeProgram.session = session
+  }
+
+  // Fin
+  return webnativeProgram
+}
 
 
-export { setup }
+
+// 🛠
+
+
+function logErrorAndRethrow<T>(promiseFn: () => Promise<T>): Promise<T> {
+  return promiseFn().catch(err => {
+    console.error(err)
+    throw new Error(err)
+  })
+}

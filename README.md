@@ -10,23 +10,19 @@ import { AppScenario } from "webnative"
 
 // Initialise
 
-const initialAppState = await walletauth.app({
+const program = await walletauth.program({
   // optional event handlers
-  onAccountChange: (newAppState) => handleAppState(newAppState),
+  onAccountChange: (newProgram) => handleProgram(newProgram),
   onDisconnect: () => { /* eg. logout() */ }
 })
 
-handleAppState(initialAppState)
+handleProgram(program)
 
-function handleAppState(appState) {
-  switch (appState.scenario) {
-    case AppScenario.Authed:
-      // ✅ Authenticated
-      break;
-
-    case AppScenario.NotAuthed:
-      // Failed to authenticate with wallet
-      break;
+function handleProgram(program) {
+  if (program.session) {
+    // ✅ Authenticated
+  } else {
+    // Failed to authenticate with wallet
   }
 }
 ```
@@ -34,7 +30,7 @@ function handleAppState(appState) {
 Use a custom Ethereum provider:
 
 ```ts
-import * as ethereum from "webnative-walletauth/wallet/ethereum.ts"
+import * as ethereum from "webnative-walletauth/wallet/ethereum"
 
 ethereum.setProvider(window.ethereum)
 ```
@@ -42,9 +38,7 @@ ethereum.setProvider(window.ethereum)
 **You can also write an implementation for other wallets.** Note that the DID method has to be supported by the [Fission server](https://github.com/fission-codes/fission), unless you're using something else with webnative. At the moment of writing, you can only use the `key` method for DIDs with the Fission servers. It supports ED25519, RSA and SECP256K1 keys, same for the UCAN algorithms.
 
 ```ts
-import * as walletImpl from "webnative-walletauth/wallet/implementation.ts"
-import { Implementation } from "webnative-walletauth/wallet/types.ts"
-
+import { Implementation } from "webnative-walletauth/wallet/implementation"
 
 const impl: Implementation = {
   decrypt:              (encryptedMessage: Uint8Array) => Promise<Uint8Array>,
@@ -57,6 +51,8 @@ const impl: Implementation = {
   verifySignedMessage:  (args: { signature: Uint8Array; message: Uint8Array; publicKey?: Uint8Array }) => Promise<boolean>,
 }
 
-// NOTE: run this before you call `walletAuth.app()`
-walletImpl.set(impl)
+// When creating a Program indicate that you want to use your custom wallet implementation.
+walletauth.program({
+  wallet: impl
+})
 ```

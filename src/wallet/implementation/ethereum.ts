@@ -1,5 +1,5 @@
 import type { ProviderRpcError } from "eip1193-provider"
-import type { Implementation, InitArgs } from "./types"
+import type { Implementation, InitArgs } from "../implementation.js"
 
 import * as nacl from "tweetnacl"
 import * as secp from "@noble/secp256k1"
@@ -7,7 +7,7 @@ import * as uint8arrays from "uint8arrays"
 import { keccak_256 } from "@noble/hashes/sha3"
 import Provider from "eip1193-provider"
 
-import { hasProp, isString, isStringArray } from "../common"
+import { hasProp, isString, isStringArray } from "../../common.js"
 
 
 // ⛰
@@ -25,6 +25,7 @@ type Signature = {
 }
 
 
+export const KEY_TYPE = "secp256k1"
 export const MSG_TO_SIGN = uint8arrays.fromString("Hi there, would you like to sign this so we can generate a DID for you?", "utf8")
 export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 
@@ -73,14 +74,6 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
       else throw new Error("Expected to decrypt a string")
     })
     .then(resp => uint8arrays.fromString(resp, "base64pad"))
-}
-
-
-export async function did(): Promise<string> {
-  const key = await publicSignatureKey()
-  const arr = uint8arrays.concat([ SECP_PREFIX, key ])
-
-  return `did:key:z${uint8arrays.toString(arr, "base58btc")}`
 }
 
 
@@ -133,7 +126,7 @@ export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise
     if (accounts.length) {
       // MetaMask can sometimes trigger accountsChanged when first connecting to an account, so we need to
       // ensure it is actually being triggered by a new account change to avoid extra signatures
-      if (globCurrentAccount !== accounts[0]) {
+      if (globCurrentAccount !== accounts[ 0 ]) {
         handleAccountsChanged(accounts)
         await onAccountChange()
       }
@@ -150,6 +143,22 @@ export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise
   })
 
   didBindEvents = true
+}
+
+
+export async function publicSignatureKey(): Promise<{ type: string, magicBytes: Uint8Array, key: Uint8Array }> {
+  if (!globPublicSignatureKey) {
+    const signature = await sign(MSG_TO_SIGN)
+    const signatureParts = deconstructSignature(signature)
+
+    globPublicSignatureKey = secp.recoverPublicKey(
+      hashMessage(MSG_TO_SIGN),
+      signatureParts.full,
+      signatureParts.recoveryParam
+    )
+  }
+
+  return { type: KEY_TYPE, magicBytes: SECP_PREFIX, key: globPublicSignatureKey }
 }
 
 
@@ -183,7 +192,7 @@ export async function verifySignedMessage(
   return secp.verify(
     deconstructSignature(signature).full,
     hashMessage(message),
-    publicKey || await publicSignatureKey()
+    publicKey || await publicSignatureKey().then(a => a.key)
   )
 }
 
@@ -246,22 +255,6 @@ export async function publicEncryptionKey(): Promise<Uint8Array> {
 
   globPublicEncryptionKey = uint8arrays.fromString(key, "base64pad")
   return globPublicEncryptionKey
-}
-
-
-export async function publicSignatureKey(): Promise<Uint8Array> {
-  if (globPublicSignatureKey) return globPublicSignatureKey
-
-  const signature = await sign(MSG_TO_SIGN)
-  const signatureParts = deconstructSignature(signature)
-
-  globPublicSignatureKey = secp.recoverPublicKey(
-    hashMessage(MSG_TO_SIGN),
-    signatureParts.full,
-    signatureParts.recoveryParam
-  )
-
-  return globPublicSignatureKey
 }
 
 
@@ -375,7 +368,7 @@ export async function verifyPublicKey(): Promise<boolean> {
   return verifySignedMessage({
     signature: await sign(MSG_TO_SIGN),
     message: MSG_TO_SIGN,
-    publicKey: await publicSignatureKey(),
+    publicKey: await publicSignatureKey().then(a => a.key),
   })
 }
 
@@ -402,13 +395,10 @@ function handleAccountsChanged(accounts: unknown) {
 export const implementation: Implementation = {
   decrypt,
   encrypt,
-  did,
   init,
+  publicSignatureKey,
   sign,
   ucanAlgorithm: "ES256K",
   username,
   verifySignedMessage,
 }
-
-
-export const ETHEREUM_IMPLEMENTATION = implementation

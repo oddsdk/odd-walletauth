@@ -11,9 +11,18 @@
   "main": "./lib/index.js",
   "exports": {
     ".": "./lib/index.js",
-    "./lib/*": "./lib/*",
-    "./*": "./lib/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./lib/*": [
+      "./lib/*.js",
+      "./lib/*",
+      "./lib/*/index.js"
+    ],
+    "./*": [
+      "./lib/*.js",
+      "./lib/*",
+      "./lib/*/index.js",
+      "./*"
+    ]
   },
   "types": "lib/index.d.ts",
   "typesVersions": {
@@ -51,7 +60,7 @@
   },
   "homepage": "https://github.com/fission-codes/webnative-walletauth#readme",
   "peerDependencies": {
-    "webnative": "^0.34.1"
+    "webnative": "^0.35.0"
   },
   "dependencies": {
     "@noble/hashes": "^1.1.2",
