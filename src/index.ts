@@ -64,7 +64,7 @@ export type Options = {
  * if you'd like to use another wallet than the built-in
  * Ethereum one.
  *
- * See webnative's `program` function documentation for more info.
+ * See [webnative's `program`](https://webnative.fission.app/functions/program-1.html) function documentation for more info.
  */
 export async function program(settings: Options & Partial<Components> & Configuration): Promise<Program> {
   const wallet = settings.wallet || EthereumWallet.implementation
