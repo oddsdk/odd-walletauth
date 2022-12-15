@@ -95,12 +95,32 @@ export async function program(settings: Options & Partial<Components> & Configur
   // > Destroy existing session when account changes or disconnects.
   // > Will create a new Program on account change.
   await wallet.init({
-    onAccountChange: async () => (await authStrategy.session())?.destroy()
-      .then(() => program(settings))
-      .then(a => settings?.onAccountChange ? settings.onAccountChange(a) : a),
+    onAccountChange: () => logErrorAndRethrow(async () => {
+      // Destroy the user's current session when the wallet account changes
+      const session = await authStrategy.session()
+      await session?.destroy()
 
-    onDisconnect: async () => (await authStrategy.session())?.destroy()
-      .then(() => settings?.onDisconnect ? settings.onDisconnect() : undefined),
+      // If the user has passed in a callback function, use it
+      const p = await program(settings)
+
+      if (settings?.onAccountChange instanceof Function) {
+        return settings.onAccountChange(p)
+      }
+
+      // Otherwise, return the program
+      return p
+    }),
+
+    onDisconnect: () => logErrorAndRethrow(async () => {
+      // Destroy the user's current session when the wallet account disconnects
+      const session = await authStrategy.session()
+      await session?.destroy()
+
+      // If the user has passed in a callback function, use it
+      if (settings?.onDisconnect instanceof Function) {
+        return settings.onDisconnect()
+      }
+    })
   })
 
   // Make a new account if necessary, otherwise provide a session.
@@ -139,4 +159,16 @@ export async function program(settings: Options & Partial<Components> & Configur
 
   // Fin
   return webnativeProgram
+}
+
+
+
+// 🛠
+
+
+function logErrorAndRethrow<T>(promiseFn: () => Promise<T>): Promise<T> {
+  return promiseFn().catch(err => {
+    console.error(err)
+    throw new Error(err)
+  })
 }
