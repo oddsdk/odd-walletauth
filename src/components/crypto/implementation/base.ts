@@ -1,6 +1,6 @@
-import * as BrowserCrypto from "webnative/components/crypto/implementation/browser"
-import * as Crypto from "webnative/components/crypto/implementation"
+import { Crypto, Storage } from "webnative"
 
+import * as BrowserCrypto from "webnative/components/crypto/implementation/browser"
 import * as Wallet from "../../../wallet/implementation.js"
 
 
@@ -8,11 +8,11 @@ import * as Wallet from "../../../wallet/implementation.js"
 
 
 export async function implementation(
+  storage: Storage.Implementation,
   wallet: Wallet.Implementation,
   opts: Crypto.ImplementationOptions
 ): Promise<Crypto.Implementation> {
   const browserCrypto = await BrowserCrypto.implementation(opts)
-  const pubKey = await wallet.publicSignatureKey()
 
   return {
     aes: browserCrypto.aes,
@@ -24,9 +24,9 @@ export async function implementation(
       keyTypes: {
         ...browserCrypto.did.keyTypes,
 
-        [ pubKey.type ]: {
-          magicBytes: pubKey.magicBytes,
-          verify: wallet.verifySignedMessage
+        [ wallet.publicSignature.type ]: {
+          magicBytes: wallet.publicSignature.magicBytes,
+          verify: (...args) => wallet.verifySignedMessage(storage, ...args)
         }
       }
     },
@@ -39,9 +39,9 @@ export async function implementation(
       publicExchangeKey: browserCrypto.keystore.publicExchangeKey,
 
       decrypt: wallet.decrypt,
-      getAlgorithm: async () => pubKey.type,
+      getAlgorithm: async () => wallet.publicSignature.type,
       getUcanAlgorithm: async () => wallet.ucanAlgorithm,
-      publicWriteKey: () => wallet.publicSignatureKey().then(a => a.key),
+      publicWriteKey: () => wallet.publicSignature.key(storage),
       sign: wallet.sign
     }
   }

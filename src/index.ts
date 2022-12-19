@@ -1,7 +1,4 @@
-import { Components, Configuration, namespace, Program } from "webnative"
-
-import * as Crypto from "webnative/components/crypto/implementation"
-import * as Manners from "webnative/components/manners/implementation"
+import { Crypto, Manners, Storage, Components, Configuration, namespace, Program } from "webnative"
 
 import * as Session from "webnative/session"
 import * as Webnative from "webnative"
@@ -20,9 +17,10 @@ import { did } from "./wallet/common.js"
 
 export const components = {
   crypto(settings: Configuration & {
+    storage: Storage.Implementation
     wallet: Wallet.Implementation
   }): Promise<Crypto.Implementation> {
-    return BaseCrypto.implementation(settings.wallet, {
+    return BaseCrypto.implementation(settings.storage, settings.wallet, {
       storeName: namespace(settings),
       exchangeKeyName: "exchange-key",
       writeKeyName: "write-key"
@@ -30,10 +28,11 @@ export const components = {
   },
 
   manners(settings: Configuration & {
-    crypto: Crypto.Implementation
+    storage: Storage.Implementation
     wallet: Wallet.Implementation
   }): Promise<Manners.Implementation> {
     return BaseManners.implementation(
+      settings.storage,
       settings.wallet,
       { configuration: settings }
     )
@@ -67,11 +66,12 @@ export type Options = {
  * See [webnative's `program`](https://webnative.fission.app/functions/program-1.html) function documentation for more info.
  */
 export async function program(settings: Options & Partial<Components> & Configuration): Promise<Program> {
-  const wallet = settings.wallet || EthereumWallet.implementation
-  const walletCrypto = await components.crypto({ ...settings, wallet })
-
   const defaultCrypto = await Webnative.defaultCryptoComponent(settings)
-  const manners = await components.manners({ ...settings, wallet, crypto: defaultCrypto })
+  const storage = await Webnative.defaultStorageComponent(settings)
+
+  const wallet = settings.wallet || EthereumWallet.implementation
+  const walletCrypto = await components.crypto({ ...settings, wallet, storage })
+  const manners = await components.manners({ ...settings, wallet, storage })
 
   // Create Webnative Program
   const webnativeProgram = await Webnative.program({
@@ -94,7 +94,7 @@ export async function program(settings: Options & Partial<Components> & Configur
   // Initialise wallet
   // > Destroy existing session when account changes or disconnects.
   // > Will create a new Program on account change.
-  await wallet.init({
+  await wallet.init(storage, {
     onAccountChange: () => logErrorAndRethrow(async () => {
       // Destroy the user's current session when the wallet account changes
       const session = await authStrategy.session()
@@ -144,7 +144,7 @@ export async function program(settings: Options & Partial<Components> & Configur
       lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
 
       audience: await Webnative.did.ucan(defaultCrypto),
-      issuer: await did(walletCrypto, wallet),
+      issuer: await did(walletCrypto, storage, wallet),
     })
 
     webnativeProgram.components.storage.setItem(
