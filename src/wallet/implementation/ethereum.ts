@@ -120,11 +120,19 @@ export async function init(
   if (didBindEvents) return
 
   const ethereum = await load()
+  const disconnect = async () => {
+    globCurrentAccount = null
+
+    ethereum.removeListener("accountsChanged", accountsChangedHandler)
+    ethereum.removeListener("disconnect", disconnectHandler)
+
+    await onDisconnect()
+  }
 
   // accountsChanged is called when the account connected to the app changes - this includes when
   // an additional account is connected, as well as when the connected account is disconnected,
   // which will return an empty accounts array
-  ethereum.on("accountsChanged", async (accounts: string[]) => {
+  const accountsChangedHandler = async (accounts: string[]) => {
     if (accounts.length) {
       // MetaMask can sometimes trigger accountsChanged when first connecting to an account, so we need to
       // ensure it is actually being triggered by a new account change to avoid extra signatures
@@ -136,16 +144,20 @@ export async function init(
     } else {
       // disconnected
       await clearCache(storage)
-      await disconnect({ onDisconnect })
+      await disconnect()
     }
-  })
+  }
+
+  ethereum.on("accountsChanged", accountsChangedHandler)
 
   // The MetaMask provider emits this event if it becomes unable to submit RPC requests to any chain.
   // In general, this will only happen due to network connectivity issues or some unforeseen error.
-  ethereum.on("disconnect", async () => {
+  const disconnectHandler = async () => {
     await clearCache(storage)
-    await disconnect({ onDisconnect })
-  })
+    await disconnect()
+  }
+
+  ethereum.on("disconnect", disconnectHandler)
 
   didBindEvents = true
 }
@@ -269,16 +281,6 @@ export async function publicEncryptionKey(storage: Storage.Implementation): Prom
 
   await toCache(storage, CACHE_KEYS.PUBLIC_ENCRYPTION_KEY, key)
   return uint8arrays.fromString(key, "base64pad")
-}
-
-
-async function disconnect({
-  onDisconnect,
-}: {
-  onDisconnect: () => Promise<unknown>
-}): Promise<void> {
-  globCurrentAccount = null
-  await onDisconnect()
 }
 
 
