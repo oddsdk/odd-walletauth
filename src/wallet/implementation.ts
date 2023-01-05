@@ -1,7 +1,10 @@
+import { Storage } from "webnative"
+
+
 export type Implementation = {
   decrypt: (encryptedMessage: Uint8Array) => Promise<Uint8Array>
-  encrypt: (data: Uint8Array) => Promise<Uint8Array>
-  init: (args: InitArgs) => Promise<void>
+  encrypt: (storage: Storage.Implementation, data: Uint8Array) => Promise<Uint8Array>
+  init: (storage: Storage.Implementation, args: InitArgs) => Promise<void>
 
   /**
    * Properties of the key used for signing.
@@ -18,11 +21,15 @@ export type Implementation = {
    * Key type: "ed25519"
    * Magic bytes: [ 0xed, 0x01 ]
    */
-  publicSignatureKey: () => Promise<{ type: string, magicBytes: Uint8Array, key: Uint8Array }>
+  publicSignature: {
+    type: string
+    magicBytes: Uint8Array
+    key: (storage: Storage.Implementation) => Promise<Uint8Array>
+  }
   sign: (data: Uint8Array) => Promise<Uint8Array>
   ucanAlgorithm: string
   username: () => Promise<string>
-  verifySignedMessage: (args: VerifyArgs) => Promise<boolean>
+  verifySignedMessage: (storage: Storage.Implementation, args: VerifyArgs) => Promise<boolean>
 }
 
 

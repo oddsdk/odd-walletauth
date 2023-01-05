@@ -1,6 +1,6 @@
 {
   "name": "webnative-walletauth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Use the [Webnative SDK](https://github.com/fission-codes/webnative#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
   "scripts": {
     "build": "npm run build:lib && npm run build:bundle",

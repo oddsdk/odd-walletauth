@@ -1,4 +1,4 @@
-import * as Manners from "webnative/components/manners/implementation"
+import { Manners, Storage } from "webnative"
 
 import * as FileSystem from "webnative/fs/types"
 import * as FileSystemProtocol from "webnative/fs/protocol/basic"
@@ -24,6 +24,7 @@ export const READ_KEY_PATH = Path.file(Path.Branch.Public, ".well-known", "read-
 
 
 export async function implementation(
+  storage: Storage.Implementation,
   wallet: Wallet.Implementation,
   opts: Manners.ImplementationOptions
 ): Promise<Manners.Implementation> {
@@ -45,7 +46,7 @@ export async function implementation(
 
           await fs.write(
             READ_KEY_PATH,
-            await wallet.encrypt(readKey)
+            await wallet.encrypt(storage, readKey)
           )
 
           return base.fileSystem.hooks.afterLoadNew(fs, account, dataComponents)

@@ -4,6 +4,7 @@ import type { Implementation, InitArgs } from "../implementation.js"
 import * as nacl from "tweetnacl"
 import * as secp from "@noble/secp256k1"
 import * as uint8arrays from "uint8arrays"
+import { Maybe, Storage } from "webnative"
 import { keccak_256 } from "@noble/hashes/sha3"
 import Provider from "eip1193-provider"
 
@@ -36,8 +37,6 @@ export const SECP_PREFIX = new Uint8Array([ 0xe7, 0x01 ])
 
 let didBindEvents = false
 let globCurrentAccount: string | null = null
-let globPublicEncryptionKey: Uint8Array | null = null
-let globPublicSignatureKey: Uint8Array | null = null
 let provider: Provider | null = hasProp(self, "ethereum") ? self.ethereum as Provider : null
 
 
@@ -77,8 +76,8 @@ export async function decrypt(encryptedMessage: Uint8Array): Promise<Uint8Array>
 }
 
 
-export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
-  const encryptionPublicKey = await publicEncryptionKey()
+export async function encrypt(storage: Storage.Implementation, data: Uint8Array): Promise<Uint8Array> {
+  const encryptionPublicKey = await publicEncryptionKey(storage)
 
   // Generate ephemeral keypair
   const ephemeralKeyPair = nacl.box.keyPair()
@@ -114,51 +113,76 @@ export async function encrypt(data: Uint8Array): Promise<Uint8Array> {
 }
 
 
-export async function init({ onAccountChange, onDisconnect }: InitArgs): Promise<void> {
+export async function init(
+  storage: Storage.Implementation,
+  { onAccountChange, onDisconnect }: InitArgs
+): Promise<void> {
   if (didBindEvents) return
 
   const ethereum = await load()
+  const disconnect = async () => {
+    globCurrentAccount = null
+
+    ethereum.removeListener("accountsChanged", accountsChangedHandler)
+    ethereum.removeListener("disconnect", disconnectHandler)
+
+    await onDisconnect()
+  }
 
   // accountsChanged is called when the account connected to the app changes - this includes when
   // an additional account is connected, as well as when the connected account is disconnected,
   // which will return an empty accounts array
-  ethereum.on("accountsChanged", async (accounts: string[]) => {
+  const accountsChangedHandler = async (accounts: string[]) => {
     if (accounts.length) {
       // MetaMask can sometimes trigger accountsChanged when first connecting to an account, so we need to
       // ensure it is actually being triggered by a new account change to avoid extra signatures
       if (globCurrentAccount !== accounts[ 0 ]) {
+        await clearCache(storage)
         handleAccountsChanged(accounts)
         await onAccountChange()
       }
     } else {
       // disconnected
-      await disconnect({ onDisconnect })
+      await clearCache(storage)
+      await disconnect()
     }
-  })
+  }
+
+  ethereum.on("accountsChanged", accountsChangedHandler)
 
   // The MetaMask provider emits this event if it becomes unable to submit RPC requests to any chain.
   // In general, this will only happen due to network connectivity issues or some unforeseen error.
-  ethereum.on("disconnect", async () => {
-    await disconnect({ onDisconnect })
-  })
+  const disconnectHandler = async () => {
+    await clearCache(storage)
+    await disconnect()
+  }
+
+  ethereum.on("disconnect", disconnectHandler)
 
   didBindEvents = true
 }
 
 
-export async function publicSignatureKey(): Promise<{ type: string, magicBytes: Uint8Array, key: Uint8Array }> {
-  if (!globPublicSignatureKey) {
-    const signature = await sign(MSG_TO_SIGN)
-    const signatureParts = deconstructSignature(signature)
+export async function publicSignatureKey(storage: Storage.Implementation): Promise<Uint8Array> {
+  const cache = await fromCache(storage, CACHE_KEYS.PUBLIC_SIGNATURE_KEY)
+  if (cache) return uint8arrays.fromString(cache, "base64pad")
 
-    globPublicSignatureKey = secp.recoverPublicKey(
-      hashMessage(MSG_TO_SIGN),
-      signatureParts.full,
-      signatureParts.recoveryParam
-    )
-  }
+  const signature = await sign(MSG_TO_SIGN)
+  const signatureParts = deconstructSignature(signature)
 
-  return { type: KEY_TYPE, magicBytes: SECP_PREFIX, key: globPublicSignatureKey }
+  const pubKey = secp.recoverPublicKey(
+    hashMessage(MSG_TO_SIGN),
+    signatureParts.full,
+    signatureParts.recoveryParam
+  )
+
+  await toCache(
+    storage,
+    CACHE_KEYS.PUBLIC_SIGNATURE_KEY,
+    uint8arrays.toString(pubKey, "base64pad")
+  )
+
+  return pubKey
 }
 
 
@@ -186,13 +210,14 @@ export function username(): Promise<string> {
 
 
 export async function verifySignedMessage(
+  storage: Storage.Implementation,
   { signature, message, publicKey }:
     { signature: Uint8Array; message: Uint8Array; publicKey?: Uint8Array }
 ): Promise<boolean> {
   return secp.verify(
     deconstructSignature(signature).full,
     hashMessage(message),
-    publicKey || await publicSignatureKey().then(a => a.key)
+    publicKey || await publicSignatureKey(storage)
   )
 }
 
@@ -231,8 +256,9 @@ export function load(): Promise<Provider> {
 }
 
 
-export async function publicEncryptionKey(): Promise<Uint8Array> {
-  if (globPublicEncryptionKey) return globPublicEncryptionKey
+export async function publicEncryptionKey(storage: Storage.Implementation): Promise<Uint8Array> {
+  const cache = await fromCache(storage, CACHE_KEYS.PUBLIC_ENCRYPTION_KEY)
+  if (cache) return uint8arrays.fromString(cache, "base64pad")
 
   const ethereum = await load()
   const account = await address()
@@ -253,18 +279,8 @@ export async function publicEncryptionKey(): Promise<Uint8Array> {
     throw new Error("Expected ethereumPublicKey to be a string")
   }
 
-  globPublicEncryptionKey = uint8arrays.fromString(key, "base64pad")
-  return globPublicEncryptionKey
-}
-
-
-async function disconnect({
-  onDisconnect,
-}: {
-  onDisconnect: () => Promise<unknown>
-}): Promise<void> {
-  globCurrentAccount = null
-  await onDisconnect()
+  await toCache(storage, CACHE_KEYS.PUBLIC_ENCRYPTION_KEY, key)
+  return uint8arrays.fromString(key, "base64pad")
 }
 
 
@@ -364,11 +380,11 @@ export function uint8ArrayToEthereumHex(data: Uint8Array): string {
 // 🔬
 
 
-export async function verifyPublicKey(): Promise<boolean> {
-  return verifySignedMessage({
+export async function verifyPublicKey(storage: Storage.Implementation): Promise<boolean> {
+  return verifySignedMessage(storage, {
     signature: await sign(MSG_TO_SIGN),
     message: MSG_TO_SIGN,
-    publicKey: await publicSignatureKey().then(a => a.key),
+    publicKey: await publicSignatureKey(storage),
   })
 }
 
@@ -389,6 +405,44 @@ function handleAccountsChanged(accounts: unknown) {
 
 
 
+// ㊙️  –  CACHE
+
+
+export const STORAGE_KEYS = {
+  PUBLIC_ENCRYPTION_KEY: "wallet/public-encryption-key",
+  PUBLIC_SIGNATURE_KEY: "wallet/public-signature-key"
+}
+
+export const CACHE_KEYS: Record<CacheKey, CacheKey> = {
+  PUBLIC_ENCRYPTION_KEY: "PUBLIC_ENCRYPTION_KEY",
+  PUBLIC_SIGNATURE_KEY: "PUBLIC_SIGNATURE_KEY"
+}
+
+type CacheKey = keyof typeof STORAGE_KEYS
+
+
+async function clearCache(storage: Storage.Implementation): Promise<void> {
+  await Promise.all(
+    Object.keys(STORAGE_KEYS).map(key => {
+      return storage.removeItem(key)
+    })
+  )
+}
+
+
+async function fromCache(storage: Storage.Implementation, prop: CacheKey): Promise<Maybe<string>> {
+  const item = await storage.getItem(STORAGE_KEYS[ prop ])
+  if (typeof item === "string") return item
+  return null
+}
+
+
+async function toCache(storage: Storage.Implementation, prop: CacheKey, value: string): Promise<void> {
+  await storage.setItem(STORAGE_KEYS[ prop ], value)
+}
+
+
+
 // 🛳
 
 
@@ -396,7 +450,11 @@ export const implementation: Implementation = {
   decrypt,
   encrypt,
   init,
-  publicSignatureKey,
+  publicSignature: {
+    type: KEY_TYPE,
+    magicBytes: SECP_PREFIX,
+    key: publicSignatureKey
+  },
   sign,
   ucanAlgorithm: "ES256K",
   username,
