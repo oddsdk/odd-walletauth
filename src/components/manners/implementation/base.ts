@@ -73,7 +73,7 @@ export async function implementation(
           const encryptedRootKey = readKeyChild.content
           const rootKey = await wallet.decrypt(encryptedRootKey)
 
-          RootKey.store({
+          await RootKey.store({
             crypto: crypto,
             accountDID: account.rootDID,
             readKey: rootKey
