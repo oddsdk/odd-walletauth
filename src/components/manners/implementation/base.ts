@@ -16,7 +16,7 @@ import * as Wallet from "../../../wallet/implementation.js"
 // 🏔
 
 
-export const READ_KEY_PATH = Path.file(Path.Branch.Public, ".well-known", "read-key")
+export const READ_KEY_PATH = Path.file("public", ".well-known", "read-key")
 
 
 
