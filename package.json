@@ -1,11 +1,11 @@
 {
-  "name": "webnative-walletauth",
+  "name": "odd-walletauth",
   "version": "0.2.2",
-  "description": "Use the [Webnative SDK](https://github.com/fission-codes/webnative#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
+  "description": "Use the [ODD SDK](https://github.com/oddsdk/ts-odd#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
   "scripts": {
     "build": "npm run build:lib && npm run build:bundle",
     "build:lib": "rimraf lib && tsc",
-    "build:bundle": "rimraf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/webnative-walletauth.js --sourcemap",
+    "build:bundle": "rimraf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/odd-walletauth.js --sourcemap",
     "prepare": "npm run build"
   },
   "main": "./lib/index.js",

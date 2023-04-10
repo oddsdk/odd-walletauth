@@ -1,7 +1,7 @@
 import { Crypto, Manners, Storage, Components, Configuration, namespace, Program } from "webnative"
 
 import * as Session from "webnative/session"
-import * as Webnative from "webnative"
+import * as ODD from "webnative"
 
 import * as BaseCrypto from "./components/crypto/implementation/base.js"
 import * as BaseManners from "./components/manners/implementation/base.js"
@@ -52,9 +52,9 @@ export type Options = {
 
 
 /**
- * 🚀 Build a webnative-walletauth program.
+ * 🚀 Build a odd-walletauth program.
  *
- * Contrary to a regular webnative program,
+ * Contrary to a regular odd program,
  * this'll create an account for you automatically.
  * It also does session management for you.
  *
@@ -62,18 +62,18 @@ export type Options = {
  * if you'd like to use another wallet than the built-in
  * Ethereum one.
  *
- * See [webnative's `program`](https://webnative.fission.app/functions/program-1.html) function documentation for more info.
+ * See [odd's `program`](https://odd.fission.app/functions/program-1.html) function documentation for more info.
  */
 export async function program(settings: Options & Partial<Components> & Configuration): Promise<Program> {
-  const defaultCrypto = settings.crypto || await Webnative.defaultCryptoComponent(settings)
-  const storage = settings.storage || Webnative.defaultStorageComponent(settings)
+  const defaultCrypto = settings.crypto || await ODD.defaultCryptoComponent(settings)
+  const storage = settings.storage || ODD.defaultStorageComponent(settings)
 
   const wallet = settings.wallet || EthereumWallet.implementation
   const walletCrypto = await components.crypto({ ...settings, wallet, storage })
   const manners = await components.manners({ ...settings, wallet, storage })
 
-  // Create Webnative `Program`s
-  const webnativeProgram = await Webnative.program({
+  // Create ODD `Program`s
+  const oddProgram = await ODD.program({
     ...settings,
     crypto: defaultCrypto,
     manners,
@@ -81,9 +81,9 @@ export async function program(settings: Options & Partial<Components> & Configur
 
   // Destroy existing session if wallet account changed
   const username = await wallet.username()
-  const isNewUser = await webnativeProgram.auth.isUsernameAvailable(username)
+  const isNewUser = await oddProgram.auth.isUsernameAvailable(username)
 
-  let session = webnativeProgram.session
+  let session = oddProgram.session
   if (session && (isNewUser || username !== session.username)) {
     await session.destroy()
     session = null
@@ -95,7 +95,7 @@ export async function program(settings: Options & Partial<Components> & Configur
   await wallet.init(storage, {
     onAccountChange: () => logErrorAndRethrow(async () => {
       // Destroy the user's current session when the wallet account changes
-      const session = await webnativeProgram.auth.session()
+      const session = await oddProgram.auth.session()
       await session?.destroy()
 
       // If the user has passed in a callback function, use it
@@ -111,7 +111,7 @@ export async function program(settings: Options & Partial<Components> & Configur
 
     onDisconnect: () => logErrorAndRethrow(async () => {
       // Destroy the user's current session when the wallet account disconnects
-      const session = await webnativeProgram.auth.session()
+      const session = await oddProgram.auth.session()
       await session?.destroy()
 
       // If the user has passed in a callback function, use it
@@ -125,24 +125,24 @@ export async function program(settings: Options & Partial<Components> & Configur
   // Afterwards, create a session.
   if (!session) {
     // Create an account UCAN
-    const accountUcan = await Webnative.ucan.build({
+    const accountUcan = await ODD.ucan.build({
       dependencies: { crypto: walletCrypto },
       potency: "APPEND",
       resource: "*",
       lifetimeInSeconds: 60 * 60 * 24 * 30 * 12 * 1000, // 1000 years
 
-      audience: await Webnative.did.ucan(defaultCrypto),
+      audience: await ODD.did.ucan(defaultCrypto),
       issuer: await did(walletCrypto, storage, wallet),
     })
 
-    await webnativeProgram.components.storage.setItem(
-      webnativeProgram.components.storage.KEYS.ACCOUNT_UCAN,
-      Webnative.ucan.encode(accountUcan)
+    await oddProgram.components.storage.setItem(
+      oddProgram.components.storage.KEYS.ACCOUNT_UCAN,
+      ODD.ucan.encode(accountUcan)
     )
 
     // Register or authenticate
     if (isNewUser) {
-      const registrationProgram = await Webnative.program({
+      const registrationProgram = await ODD.program({
         ...settings,
         crypto: walletCrypto,
         manners,
@@ -152,18 +152,18 @@ export async function program(settings: Options & Partial<Components> & Configur
       if (!success) throw new Error("Failed to register user")
     } else {
       await Session.provide(
-        webnativeProgram.components.storage,
-        { type: webnativeProgram.auth.implementation.type, username }
+        oddProgram.components.storage,
+        { type: oddProgram.auth.implementation.type, username }
       )
     }
 
     // Create session
-    session = await webnativeProgram.auth.session()
-    webnativeProgram.session = session
+    session = await oddProgram.auth.session()
+    oddProgram.session = session
   }
 
   // Fin
-  return webnativeProgram
+  return oddProgram
 }
 
 

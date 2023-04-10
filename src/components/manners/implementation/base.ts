@@ -4,7 +4,7 @@ import * as FileSystem from "webnative/fs/types"
 import * as FileSystemProtocol from "webnative/fs/protocol/basic"
 import * as Path from "webnative/path/index"
 import * as RootKey from "webnative/common/root-key"
-import * as WebnativeManners from "webnative/components/manners/implementation/base"
+import * as ODDManners from "webnative/components/manners/implementation/base"
 
 import { PublicFile } from "webnative/fs/v1/PublicFile"
 import { PublicTree } from "webnative/fs/v1/PublicTree"
@@ -28,7 +28,7 @@ export async function implementation(
   wallet: Wallet.Implementation,
   opts: Manners.ImplementationOptions
 ): Promise<Manners.Implementation> {
-  const base = WebnativeManners.implementation(opts)
+  const base = ODDManners.implementation(opts)
 
   return {
     ...base,
