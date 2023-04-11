@@ -1,14 +1,14 @@
-import { Manners, Storage } from "webnative"
+import { Manners, Storage } from "@oddjs/odd"
 
-import * as FileSystem from "webnative/fs/types"
-import * as FileSystemProtocol from "webnative/fs/protocol/basic"
-import * as Path from "webnative/path/index"
-import * as RootKey from "webnative/common/root-key"
-import * as ODDManners from "webnative/components/manners/implementation/base"
+import * as FileSystem from "@oddjs/odd/fs/types"
+import * as FileSystemProtocol from "@oddjs/odd/fs/protocol/basic"
+import * as Path from "@oddjs/odd/path/index"
+import * as RootKey from "@oddjs/odd/common/root-key"
+import * as ODDManners from "@oddjs/odd/components/manners/implementation/base"
 
-import { PublicFile } from "webnative/fs/v1/PublicFile"
-import { PublicTree } from "webnative/fs/v1/PublicTree"
-import { CID, decodeCID } from "webnative/common/cid"
+import { PublicFile } from "@oddjs/odd/fs/v1/PublicFile"
+import { PublicTree } from "@oddjs/odd/fs/v1/PublicTree"
+import { CID, decodeCID } from "@oddjs/odd/common/cid"
 
 import * as Wallet from "../../../wallet/implementation.js"
 

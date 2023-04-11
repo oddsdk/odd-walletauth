@@ -44,9 +44,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fission-codes/webnative-walletauth.git"
+    "url": "git+https://github.com/oddsdk/odd-walletauth.git"
   },
   "keywords": [
+    "odd",
+    "oddsdk",
+    "oddjs",
+    "ts-odd",
     "webnative",
     "walletauth",
     "wallet",
@@ -56,11 +60,11 @@
   "author": "icidasset",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/fission-codes/webnative-walletauth/issues"
+    "url": "https://github.com/oddsdk/odd-walletauth/issues"
   },
-  "homepage": "https://github.com/fission-codes/webnative-walletauth#readme",
+  "homepage": "https://github.com/oddsdk/odd-walletauth#readme",
   "peerDependencies": {
-    "webnative": "^0.36.3"
+    "@oddjs/odd": "^0.37.0"
   },
   "dependencies": {
     "@noble/hashes": "^1.1.2",

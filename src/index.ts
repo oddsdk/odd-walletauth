@@ -1,7 +1,7 @@
-import { Crypto, Manners, Storage, Components, Configuration, namespace, Program } from "webnative"
+import { Crypto, Manners, Storage, Components, Configuration, namespace, Program } from "@oddjs/odd"
 
-import * as Session from "webnative/session"
-import * as ODD from "webnative"
+import * as Session from "@oddjs/odd/session"
+import * as ODD from "@oddjs/odd"
 
 import * as BaseCrypto from "./components/crypto/implementation/base.js"
 import * as BaseManners from "./components/manners/implementation/base.js"
