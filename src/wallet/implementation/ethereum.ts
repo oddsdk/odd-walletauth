@@ -4,7 +4,7 @@ import type { Implementation, InitArgs } from "../implementation.js"
 import * as nacl from "tweetnacl"
 import * as secp from "@noble/secp256k1"
 import * as uint8arrays from "uint8arrays"
-import { Maybe, Storage } from "webnative"
+import { Maybe, Storage } from "@oddjs/odd"
 import { keccak_256 } from "@noble/hashes/sha3"
 import Provider from "eip1193-provider"
 

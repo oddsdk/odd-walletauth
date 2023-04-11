@@ -1,6 +1,6 @@
-import { Crypto, Storage } from "webnative"
+import { Crypto, Storage } from "@oddjs/odd"
 
-import * as BrowserCrypto from "webnative/components/crypto/implementation/browser"
+import * as BrowserCrypto from "@oddjs/odd/components/crypto/implementation/browser"
 import * as Wallet from "../../../wallet/implementation.js"
 
 

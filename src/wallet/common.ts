@@ -1,5 +1,5 @@
-import { Crypto, Storage } from "webnative"
-import { publicKeyToDid } from "webnative/did/index"
+import { Crypto, Storage } from "@oddjs/odd"
+import { publicKeyToDid } from "@oddjs/odd/did/index"
 
 import * as Wallet from "./implementation.js"
 

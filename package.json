@@ -1,11 +1,11 @@
 {
-  "name": "webnative-walletauth",
+  "name": "@oddjs/odd-walletauth",
   "version": "0.2.2",
-  "description": "Use the [Webnative SDK](https://github.com/fission-codes/webnative#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
+  "description": "Use the [ODD SDK](https://github.com/oddsdk/ts-odd#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
   "scripts": {
     "build": "npm run build:lib && npm run build:bundle",
     "build:lib": "rimraf lib && tsc",
-    "build:bundle": "rimraf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/webnative-walletauth.js --sourcemap",
+    "build:bundle": "rimraf dist && esbuild src/index.ts --bundle --format=esm --outfile=dist/odd-walletauth.js --sourcemap",
     "prepare": "npm run build"
   },
   "main": "./lib/index.js",
@@ -44,10 +44,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fission-codes/webnative-walletauth.git"
+    "url": "git+https://github.com/oddsdk/odd-walletauth.git"
   },
   "keywords": [
-    "webnative",
+    "odd",
+    "oddsdk",
+    "oddjs",
+    "ts-odd",
     "walletauth",
     "wallet",
     "metamask",
@@ -56,11 +59,11 @@
   "author": "icidasset",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/fission-codes/webnative-walletauth/issues"
+    "url": "https://github.com/oddsdk/odd-walletauth/issues"
   },
-  "homepage": "https://github.com/fission-codes/webnative-walletauth#readme",
+  "homepage": "https://github.com/oddsdk/odd-walletauth#readme",
   "peerDependencies": {
-    "webnative": "^0.36.3"
+    "@oddjs/odd": "^0.37.0"
   },
   "dependencies": {
     "@noble/hashes": "^1.1.2",

@@ -1,4 +1,4 @@
-import { Storage } from "webnative"
+import { Storage } from "@oddjs/odd"
 
 
 export type Implementation = {
