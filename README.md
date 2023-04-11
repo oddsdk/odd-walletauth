@@ -6,7 +6,7 @@ Uses Ethereum by default with `window.ethereum` as the provider. Currently only 
 
 ```ts
 import * as walletauth from "odd-walletauth";
-import { AppScenario } from "odd";
+import { AppScenario } from "@oddjs/odd";
 
 // Initialise
 
