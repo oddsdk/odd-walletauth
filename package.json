@@ -1,5 +1,5 @@
 {
-  "name": "odd-walletauth",
+  "name": "@oddjs/odd-walletauth",
   "version": "0.2.2",
   "description": "Use the [ODD SDK](https://github.com/oddsdk/ts-odd#readme) with a blockchain wallet. Access your personal encrypted file system with your wallet keys.",
   "scripts": {
@@ -51,7 +51,6 @@
     "oddsdk",
     "oddjs",
     "ts-odd",
-    "webnative",
     "walletauth",
     "wallet",
     "metamask",
